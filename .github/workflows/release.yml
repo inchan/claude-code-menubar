@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
 
       - name: Select Xcode
         if: steps.skip.outputs.exists == 'false'
-        run: sudo xcode-select -s /Applications/Xcode_16.app || true
+        run: sudo xcode-select -s /Applications/Xcode_16.app
 
       - name: Build app bundle (ad-hoc signed)
         if: steps.skip.outputs.exists == 'false'
