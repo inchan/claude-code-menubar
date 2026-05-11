@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "CCAccountManager",
+    name: "CCMeter",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "CCAccountManager", targets: ["CCAccountManager"])
+        .executable(name: "CCMeter", targets: ["CCMeter"])
     ],
     targets: [
         .executableTarget(
-            name: "CCAccountManager",
-            path: "Sources/CCAccountManager"
+            name: "CCMeter",
+            path: "Sources/CCMeter"
         )
     ]
 )

@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 
 enum Log {
-    private static let subsystem = "com.inchan.cc-account-manager"
+    private static let subsystem = "com.inchan.ccmeter"
     static let app = Logger(subsystem: subsystem, category: "app")
     static let store = Logger(subsystem: subsystem, category: "storage")
     static let switching = Logger(subsystem: subsystem, category: "switch")

@@ -4,7 +4,7 @@ import AppKit
 /// SwiftUI App + Settings scene 조합이 macOS 26 에서 AppDelegate 콜백을 호출하지 않는
 /// 케이스가 발생했음.
 @main
-enum CCAccountManagerMain {
+enum CCMeterMain {
     static func main() {
         let app = NSApplication.shared
         let delegate = AppDelegate()
@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         monitor.start()
 
-        Log.app.info("CC Account Manager started (bundleId=\(Bundle.main.bundleIdentifier ?? "?"))")
+        Log.app.info("CCMeter started (bundleId=\(Bundle.main.bundleIdentifier ?? "?"))")
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -81,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func prepareAppRoot() {
+        Paths.migrateLegacyAppRootIfNeeded()
         let dirs = [Paths.appRoot, Paths.snapshotsDir, Paths.backupsDir]
         for dir in dirs {
             try? FileManager.default.createDirectory(

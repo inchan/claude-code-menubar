@@ -1,6 +1,6 @@
 SHELL := /bin/bash
-APP_NAME := CCAccountManager
-DISPLAY_NAME := CC Account Manager
+APP_NAME := CCMeter
+DISPLAY_NAME := CCMeter
 BUILD_CONFIG := release
 BIN_PATH := .build/$(BUILD_CONFIG)/$(APP_NAME)
 APP_BUNDLE := build/$(DISPLAY_NAME).app
@@ -27,8 +27,8 @@ app: build
 	@mkdir -p "$(APP_BUNDLE)/Contents/Resources"
 	@cp "$(BIN_PATH)" "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)"
 	@cp Resources/Info.plist.template "$(APP_BUNDLE)/Contents/Info.plist"
-	@if [ -d "$(BIN_PATH)_CCAccountManager.bundle" ]; then \
-		cp -R "$(BIN_PATH)_CCAccountManager.bundle/." "$(APP_BUNDLE)/Contents/Resources/"; \
+	@if [ -d "$(BIN_PATH)_CCMeter.bundle" ]; then \
+		cp -R "$(BIN_PATH)_CCMeter.bundle/." "$(APP_BUNDLE)/Contents/Resources/"; \
 	fi
 	@if [ -n "$(SIGN_IDENTITY)" ]; then \
 		echo ">> codesign with stable identity: $(SIGN_IDENTITY)"; \

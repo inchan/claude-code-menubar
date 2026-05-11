@@ -1,4 +1,4 @@
-# CC Account Manager
+# CCMeter
 
 macOS 메뉴바에서 Claude Code 계정을 빠르게 전환하고, 계정별 5h/7d 사용량을 한눈에 확인합니다.
 
@@ -12,7 +12,7 @@ macOS 메뉴바에서 Claude Code 계정을 빠르게 전환하고, 계정별 5h
 ## 빌드
 
 ```sh
-make app           # .build/release 빌드 → "build/CC Account Manager.app" 생성 + ad-hoc codesign
+make app           # .build/release 빌드 → "build/CCMeter.app" 생성 + ad-hoc codesign
 make install       # ~/Applications/ 에 설치
 make run           # 빌드 후 실행
 make clean         # 산출물 정리
@@ -22,10 +22,10 @@ make clean         # 산출물 정리
 
 ## 저장 구조
 
-자체 저장소(`~/.cc-account-manager/`)만 사용하며 다른 도구의 데이터를 수정하지 않습니다.
+자체 저장소(`~/.ccmeter/`)만 사용하며 다른 도구의 데이터를 수정하지 않습니다.
 
 ```
-~/.cc-account-manager/
+~/.ccmeter/
 ├── accounts.json                # 등록된 계정 목록 (id, label, color, email, accountUuid, ...)
 ├── snapshots/<id>/
 │   ├── claude-config.json       # ~/.claude.json 의 oauthAccount 백업
@@ -35,6 +35,9 @@ make clean         # 산출물 정리
 ├── settings.json                # 폴링 간격, 임계치 등
 └── .lock                        # flock 단일 진입
 ```
+
+> 구버전(`~/.cc-account-manager/`)이 남아있으면 첫 실행 시 자동으로 `~/.ccmeter/`로 이동합니다.
+> 신버전 디렉터리가 이미 있으면 마이그레이션은 건너뜁니다.
 
 스위치 트랜잭션은 다음 순서로 진행됩니다.
 1. `flock` 단일 진입
@@ -64,7 +67,7 @@ make clean         # 산출물 정리
 
 - Keychain 의 `Claude Code-credentials` 항목은 직접 건드리지 않습니다. 환경에서 관찰된 동작상 `.credentials.json` 파일 교체만으로 Claude Code 가 새 토큰을 인식합니다 (Linux/macOS 모두).
 - `claude auth login` 은 PTY 가 필요하므로 Terminal.app 을 띄워 실행한 뒤, 사용자가 종료하면 메뉴에서 “Import current” 를 눌러 등록합니다.
-- 메뉴바 라벨은 macOS 13+ `MenuBarExtra` 를 사용합니다.
+- 메뉴바 라벨은 macOS 13+ `MenuBarExtra` 가 아니라 AppKit `NSStatusItem` 직접 제어 (ARCHITECTURE.md D1).
 
 ## 라이선스
 
