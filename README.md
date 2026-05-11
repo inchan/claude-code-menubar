@@ -3,11 +3,9 @@
 macOS 메뉴바에서 Claude Code 계정을 빠르게 전환하고, 계정별 5h/7d 사용량을 한눈에 확인합니다.
 
 <p align="center">
-  <img src="docs/screenshots/demo.gif" alt="CCMeter menubar label, popover, settings" width="640">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/popover.png" alt="CCMeter popover detail" width="640">
+  <img src="docs/screenshots/popover.jpg" alt="CCMeter popover" height="380">
+  &nbsp;
+  <img src="docs/screenshots/demo.gif" alt="CCMeter demo: menubar → popover → settings" height="380">
 </p>
 
 > 메뉴바 라벨에는 활성 계정 이니셜, 5시간 세션 사용량 `S`, 7일 주간 사용량 `W` 가 표시됩니다. 라벨을 클릭하면 등록된 모든 계정의 사용량·리셋 시각·1-클릭 전환을 popover 로 제공합니다. 설정 창에서는 계정 추가/삭제, 표시 형식(숫자/진행바), 임계치 색상, 단축키, 시스템 옵션을 조정할 수 있습니다.
