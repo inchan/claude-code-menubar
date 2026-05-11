@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide next version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          LATEST=$(git tag --list 'v*' --sort=-v:refname | head -1 || true)
+          if [ -z "$LATEST" ]; then
+            NEXT_SHORT="0.0.1"
+          else
+            SHORT="${LATEST#v}"
+            MAJOR="${SHORT%%.*}"
+            REST="${SHORT#*.}"
+            MINOR="${REST%%.*}"
+            PATCH="${REST#*.}"
+            NEXT_SHORT="${MAJOR}.${MINOR}.$((PATCH+1))"
+          fi
+          NEXT="v${NEXT_SHORT}"
+          echo "next=$NEXT"             >> "$GITHUB_OUTPUT"
+          echo "next_short=$NEXT_SHORT" >> "$GITHUB_OUTPUT"
+          echo "Resolved next=$NEXT"
+
+      - name: Skip if tag already exists
+        id: skip
+        shell: bash
+        env:
+          NEXT_TAG: ${{ steps.ver.outputs.next }}
+        run: |
+          if git rev-parse "refs/tags/${NEXT_TAG}" >/dev/null 2>&1; then
+            echo "exists=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stamp Info.plist with release version
+        if: steps.skip.outputs.exists == 'false'
+        env:
+          NEXT_SHORT: ${{ steps.ver.outputs.next_short }}
+        run: |
+          /usr/libexec/PlistBuddy \
+            -c "Set :CFBundleShortVersionString ${NEXT_SHORT}" \
+            Resources/Info.plist.template
+
+      - name: Select Xcode
+        if: steps.skip.outputs.exists == 'false'
+        run: sudo xcode-select -s /Applications/Xcode_16.app || true
+
+      - name: Build app bundle (ad-hoc signed)
+        if: steps.skip.outputs.exists == 'false'
+        run: make app
+
+      - name: Zip app bundle
+        if: steps.skip.outputs.exists == 'false'
+        env:
+          NEXT_TAG: ${{ steps.ver.outputs.next }}
+        run: |
+          cd build
+          ditto -c -k --keepParent "CCMeter.app" "CCMeter-${NEXT_TAG}.zip"
+          ls -la
+
+      - name: Create tag
+        if: steps.skip.outputs.exists == 'false'
+        env:
+          NEXT_TAG: ${{ steps.ver.outputs.next }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${NEXT_TAG}" -m "${NEXT_TAG}"
+          git push origin "${NEXT_TAG}"
+
+      - name: Create GitHub Release
+        if: steps.skip.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.next }}
+          name: ${{ steps.ver.outputs.next }}
+          generate_release_notes: true
+          files: build/CCMeter-${{ steps.ver.outputs.next }}.zip
