@@ -109,7 +109,6 @@ enum UsageDisplayMode: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// utilization (0..100) 을 화면 표시 percent 로 변환.
     func display(utilization: Int) -> Int {
         switch self {
         case .used: return max(0, min(100, utilization))
@@ -118,19 +117,69 @@ enum UsageDisplayMode: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// 메뉴바 라벨 + 드롭다운에서 어떤 사용량을 보일지.
+enum UsageVisibility: String, Codable, CaseIterable, Sendable {
+    case sessionOnly  // 5h 만
+    case weeklyOnly   // 7d 만
+    case both         // 둘 다 (기본)
+
+    var label: String {
+        switch self {
+        case .sessionOnly: return "세션만"
+        case .weeklyOnly: return "주간만"
+        case .both: return "세션 + 주간"
+        }
+    }
+
+    var showsSession: Bool { self != .weeklyOnly }
+    var showsWeekly: Bool { self != .sessionOnly }
+}
+
+/// 메뉴바 라벨 표시 스타일.
+enum MenuBarStyle: String, Codable, CaseIterable, Sendable {
+    case percent   // "S: 50%  W: 12%"
+    case progress  // 그래픽 progress bar
+
+    var label: String {
+        switch self {
+        case .percent: return "숫자(%)"
+        case .progress: return "진행률 바"
+        }
+    }
+}
+
+/// 시간 표시 형식.
+enum TimeFormatStyle: String, Codable, CaseIterable, Sendable {
+    case twelveHour    // 12시간제 (locale 적용: KO=오후 10:00, EN=10:00 PM)
+    case twentyFourHour // 24시간제 (HH:mm)
+
+    var label: String {
+        switch self {
+        case .twelveHour: return "12시간 (AM/PM)"
+        case .twentyFourHour: return "24시간"
+        }
+    }
+}
+
 struct AppSettings: Codable, Sendable {
     var pollIntervalActiveSeconds: Int = 60
     var pollIntervalInactiveSeconds: Int = 300
-    var launchAtLogin: Bool = true
+    var launchAtLogin: Bool = false
     var thresholdWarning: Int = 80
     var thresholdCritical: Int = 95
     var usageDisplayMode: UsageDisplayMode = .used
+    var usageVisibility: UsageVisibility = .both
+    var menuBarStyle: MenuBarStyle = .percent
+    var timeFormat: TimeFormatStyle = .twelveHour
+    /// ThresholdLevel.rawValue → hex (#RRGGBB). nil 또는 누락 시 system default 사용.
+    var colorOverrides: [String: String] = [:]
 
     static let defaults = AppSettings()
 
     enum CodingKeys: String, CodingKey {
         case pollIntervalActiveSeconds, pollIntervalInactiveSeconds, launchAtLogin
         case thresholdWarning, thresholdCritical, usageDisplayMode
+        case usageVisibility, menuBarStyle, timeFormat, colorOverrides
     }
 
     init() {}
@@ -139,9 +188,13 @@ struct AppSettings: Codable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         pollIntervalActiveSeconds = try c.decodeIfPresent(Int.self, forKey: .pollIntervalActiveSeconds) ?? 60
         pollIntervalInactiveSeconds = try c.decodeIfPresent(Int.self, forKey: .pollIntervalInactiveSeconds) ?? 300
-        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? true
+        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
         thresholdWarning = try c.decodeIfPresent(Int.self, forKey: .thresholdWarning) ?? 80
         thresholdCritical = try c.decodeIfPresent(Int.self, forKey: .thresholdCritical) ?? 95
         usageDisplayMode = try c.decodeIfPresent(UsageDisplayMode.self, forKey: .usageDisplayMode) ?? .used
+        usageVisibility = try c.decodeIfPresent(UsageVisibility.self, forKey: .usageVisibility) ?? .both
+        menuBarStyle = try c.decodeIfPresent(MenuBarStyle.self, forKey: .menuBarStyle) ?? .percent
+        timeFormat = try c.decodeIfPresent(TimeFormatStyle.self, forKey: .timeFormat) ?? .twelveHour
+        colorOverrides = try c.decodeIfPresent([String: String].self, forKey: .colorOverrides) ?? [:]
     }
 }

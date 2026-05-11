@@ -33,13 +33,12 @@ struct SwitchTransaction {
     let accountRepo: AccountRepositoryProtocol
 
     init(configFile: ClaudeConfigFile = ClaudeConfigFile(),
-         credFile: ClaudeCredentialsFile = ClaudeCredentialsFile(),
          snapshotStore: ProfileSnapshotStoreProtocol,
          backups: BackupRotator = BackupRotator(),
          processGuard: ClaudeProcessGuard = ClaudeProcessGuard(),
          accountRepo: AccountRepositoryProtocol) {
         self.configFile = configFile
-        self.credFile = credFile
+        self.credFile = ClaudeCredentialsFile()  // 쓰기 전용 (read 는 ClaudeLiveCredentials)
         self.snapshotStore = snapshotStore
         self.backups = backups
         self.processGuard = processGuard
@@ -67,12 +66,13 @@ struct SwitchTransaction {
         // 대상 credentials 디코드 검증 (corrupt 데이터 차단)
         _ = try JSON.decode(ClaudeCredentialsRoot.self, from: target.credentialsJSON)
 
-        // 4) 활성 자료 수집 + timestamp 백업
+        // 4) 활성 자료 수집 + timestamp 백업.
+        //    credentials 는 단일 정의원(ClaudeLiveCredentials) 통과 — Keychain 우선.
         let activeOAuth: Data
         let activeCreds: Data
         do {
             activeOAuth = try configFile.readOAuthAccountJSON()
-            activeCreds = try credFile.readRaw()
+            activeCreds = try ClaudeLiveCredentials.readRaw()
         } catch {
             throw SwitchError.noActiveProfile
         }

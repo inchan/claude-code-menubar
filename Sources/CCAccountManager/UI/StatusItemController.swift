@@ -12,6 +12,7 @@ final class StatusItemController {
     private let monitor: UsageMonitor
     private let settings: AppSettingsStore
     private var cancellables: Set<AnyCancellable> = []
+    private var lastImageKey: String?
 
     init(manager: AccountManager, monitor: UsageMonitor, settings: AppSettingsStore) {
         self.manager = manager
@@ -66,7 +67,11 @@ final class StatusItemController {
             .store(in: &cancellables)
         settings.objectWillChange
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.refreshImage() }
+            .sink { [weak self] _ in
+                // 설정 변경 시 cache key 강제 무효화 — 즉시 라벨 재렌더.
+                self?.lastImageKey = nil
+                self?.refreshImage()
+            }
             .store(in: &cancellables)
     }
 
@@ -74,18 +79,25 @@ final class StatusItemController {
         guard let button = statusItem.button else { return }
         let acc = activeAccount
         let snap = activeUsage
-        let mode = settings.settings.usageDisplayMode
-        let fiveDisplay: Int? = snap.map { mode.display(utilization: $0.fiveHourUtilization) }
-        let sevenDisplay: Int? = snap.flatMap { s in
-            s.sevenDayUtilization.map { mode.display(utilization: $0) }
-        }
+        let s = settings.settings
+        let fiveDisplay: Int? = (s.usageVisibility.showsSession ? snap : nil)
+            .map { s.usageDisplayMode.display(utilization: $0.fiveHourUtilization) }
+        let sevenDisplay: Int? = (s.usageVisibility.showsWeekly ? snap : nil)
+            .flatMap { sn in sn.sevenDayUtilization.map { s.usageDisplayMode.display(utilization: $0) } }
+        let fLevel = (s.usageVisibility.showsSession ? snap : nil).map(\.fiveHourLevel.rawValue) ?? "-"
+        let sLevel = (s.usageVisibility.showsWeekly ? snap : nil).map(\.sevenDayLevel.rawValue) ?? "-"
+        let key = "\(acc?.initial ?? "?")|\(acc?.colorHex ?? "")|\(s.menuBarStyle.rawValue)|\(fiveDisplay.map(String.init) ?? "-")|\(fLevel)|\(sevenDisplay.map(String.init) ?? "-")|\(sLevel)|\(s.colorOverrides.description)"
+        if key == lastImageKey { return }
+        lastImageKey = key
         button.image = StatusIconRenderer.renderStatusBar(
             initial: acc?.initial ?? "?",
             hex: acc?.colorHex ?? "#888888",
             fiveHour: fiveDisplay,
-            fiveLevel: snap?.fiveHourLevel,
+            fiveLevel: s.usageVisibility.showsSession ? snap?.fiveHourLevel : nil,
             sevenDay: sevenDisplay,
-            sevenLevel: snap?.sevenDayLevel
+            sevenLevel: s.usageVisibility.showsWeekly ? snap?.sevenDayLevel : nil,
+            style: s.menuBarStyle,
+            colorOverrides: s.colorOverrides
         )
     }
 
@@ -94,26 +106,8 @@ final class StatusItemController {
             popover.performClose(sender)
             return
         }
-        guard let button = statusItem.button else {
-            Log.ui.error("[POPOVER] statusItem.button is nil")
-            return
-        }
-        // DEBUG: anchor 진단 로그
-        let bBounds = button.bounds
-        let bFrame = button.frame
-        let winFrame = button.window?.frame ?? .zero
-        let screenFrame = button.window?.screen?.frame ?? .zero
-        let hostSize = popover.contentViewController?.preferredContentSize ?? .zero
-        Log.ui.info("[POPOVER pre-show] button.bounds=\(bBounds.debugDescription, privacy: .public) button.frame=\(bFrame.debugDescription, privacy: .public) window.frame=\(winFrame.debugDescription, privacy: .public) screen=\(screenFrame.debugDescription, privacy: .public) hostPref=\(hostSize.debugDescription, privacy: .public)")
-
+        guard let button = statusItem.button else { return }
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-
-        // post-show: 실제 popover window 위치
-        if let pw = popover.contentViewController?.view.window {
-            Log.ui.info("[POPOVER post-show] popoverWindow.frame=\(pw.frame.debugDescription, privacy: .public) isVisible=\(pw.isVisible)")
-        } else {
-            Log.ui.error("[POPOVER post-show] popover window nil")
-        }
         popover.contentViewController?.view.window?.makeKey()
         manager.reload()
         Task { await monitor.refreshActiveOnce() }

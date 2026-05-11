@@ -59,6 +59,20 @@
   로그에서 즉시 드러남.
 - **운영**: `log show --info --predicate 'subsystem == "com.inchan.cc-account-manager"' --last 1m | grep SELF-CHECK`
 
+## D7. 활성 Claude credentials 는 `ClaudeLiveCredentials` 단일 정의원으로만 read
+
+- **결정**: 활성 OAuth 토큰/credentials 를 읽는 모든 경로는 `ClaudeLiveCredentials.readRaw()` 통과.
+  `ClaudeCredentialsFile().readRaw()` 직접 호출 금지 (helper 내부 fallback 외).
+- **이유**: macOS Claude Code 는 토큰 refresh / 새 계정 로그인 시 **Keychain 만 갱신**하고
+  `~/.claude/.credentials.json` 파일을 stale 또는 부재 상태로 남기는 동작이 관찰됨.
+  파일만 읽으면:
+  - import 시 새 계정 로그인 직후 `readRaw` throw → import 실패
+  - polling 시 stale 토큰으로 영구 401
+- **단일 정의원**: Keychain 우선 → 파일 fallback. 양쪽 부재 시 `notFound` throw.
+- **소스 로깅**: helper 가 매 read 시 `[CRED-SRC] keychain|file|none` 을 로깅 → 회귀 즉시 진단.
+- **차단**: `grep -rn "ClaudeCredentialsFile().readRaw\|ClaudeCredentialsFile()" Sources/`
+  결과가 helper 자체를 제외하고 0 이어야 함.
+
 ## 검증 명령
 
 ```sh
@@ -73,4 +87,12 @@ grep -rn "MenuBarExtra" Sources/
 
 # lockFocus 패턴 적발
 grep -rn "lockFocusFlipped\|\.lockFocus" Sources/
+
+# Live credentials 단일 정의원 위반 적발 (helper 자체 제외)
+grep -rn "ClaudeCredentialsFile()" Sources/ \
+    | grep -v "ClaudeLiveCredentials.swift\|ClaudeCredentialsFile.swift"
+# 결과: SwitchTransaction 의 self.credFile = ClaudeCredentialsFile() (쓰기 전용) — 허용
+
+# CRED-SRC 로깅 — 런타임에 어느 소스에서 읽었는지 확인
+log show --info --predicate 'subsystem == "com.inchan.cc-account-manager"' --last 5m | grep CRED-SRC
 ```

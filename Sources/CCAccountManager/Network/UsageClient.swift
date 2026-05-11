@@ -96,7 +96,7 @@ struct UsageClient: UsageClientProtocol {
 
         let decoded: UsageResponse
         do {
-            decoded = try JSONDecoder().decode(UsageResponse.self, from: data)
+            decoded = try JSON.decoder.decode(UsageResponse.self, from: data)
         } catch {
             throw UsageClientError.decodeFailed(String(describing: error))
         }
@@ -124,7 +124,7 @@ struct UsageClient: UsageClientProtocol {
            let s = Double(h) {
             return s
         }
-        if let parsed = try? JSONDecoder().decode(UsageResponse.self, from: body),
+        if let parsed = try? JSON.decoder.decode(UsageResponse.self, from: body),
            let r = parsed.retry_after {
             return TimeInterval(r)
         }
@@ -133,11 +133,18 @@ struct UsageClient: UsageClientProtocol {
 
     private func parseDate(_ s: String?) -> Date? {
         guard let s, !s.isEmpty else { return nil }
-        let withFraction = ISO8601DateFormatter()
-        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = withFraction.date(from: s) { return d }
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        return plain.date(from: s)
+        return Self.iso8601WithFraction.date(from: s) ?? Self.iso8601.date(from: s)
     }
+
+    // ISO8601DateFormatter 는 thread-safe (Apple 문서) → static let 캐시 안전.
+    nonisolated(unsafe) private static let iso8601WithFraction: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    nonisolated(unsafe) private static let iso8601: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
 }

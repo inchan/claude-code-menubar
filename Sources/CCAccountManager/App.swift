@@ -45,6 +45,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        monitor?.teardown()
+    }
+
     private func enforceSingleInstance() {
         do {
             instanceLock = try FileLock.acquire(at: Paths.appInstanceLockFile.path,

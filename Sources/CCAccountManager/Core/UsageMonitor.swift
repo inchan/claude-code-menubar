@@ -6,7 +6,6 @@ import Combine
 final class UsageMonitor: ObservableObject {
     @Published private(set) var snapshots: [AccountID: UsageSnapshot] = [:]
     @Published private(set) var lastError: [AccountID: String] = [:]
-    /// 429 발생 시 다음 폴링 가능한 시각.
     private var nextEligibleAt: [AccountID: Date] = [:]
 
     private weak var accountManager: AccountManager?
@@ -17,6 +16,8 @@ final class UsageMonitor: ObservableObject {
 
     private var activeTimer: Timer?
     private var inactiveTimer: Timer?
+    private var cancellables: Set<AnyCancellable> = []
+    private var notificationToken: NSObjectProtocol?
 
     init(accountManager: AccountManager,
          client: UsageClientProtocol = UsageClient(),
@@ -28,44 +29,20 @@ final class UsageMonitor: ObservableObject {
         self.snapshotStore = snapshotStore
         self.settingsStore = settingsStore
         self.clock = clock
-        // init 시점에 accounts 가 비었어도 OK — 아래 observer 가 reload 시 자동 채움.
+        // init 시점에 accounts 가 비어 있어도 OK — 아래 observer 가 reload 시 자동 채움.
         loadCachedSnapshots()
         observeAccountChanges()
         observeAccountListChanges()
     }
 
-    /// AccountManager.accounts 가 갱신될 때마다 cached snapshots 를 재로드.
-    /// init 순서(monitor before reload)에 의존하지 않도록 — 원천 차단.
-    private func observeAccountListChanges() {
-        accountManager?.$accounts
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.loadCachedSnapshots()
-            }
-            .store(in: &accountObservers)
-    }
-
-    private var accountObservers: Set<AnyCancellable> = []
-
-    /// 새 토큰 import / 스위치 직후 호출되어 backoff 를 풀고 즉시 재폴링한다.
-    func invalidateBackoff(for accountID: AccountID) {
-        nextEligibleAt[accountID] = nil
-        lastError[accountID] = nil
-        Task { await refresh(accountID: accountID) }
-    }
-
-    private func observeAccountChanges() {
-        NotificationCenter.default.addObserver(
-            forName: .ccAccountChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
-            guard let self else { return }
-            let id = note.userInfo?["accountID"] as? AccountID
-            Task { @MainActor in
-                if let id { self.invalidateBackoff(for: id) }
-            }
+    /// 앱 종료 시 AppDelegate 가 명시 호출. deinit 는 Swift 6 isolation 충돌로 미사용.
+    func teardown() {
+        stop()
+        if let token = notificationToken {
+            NotificationCenter.default.removeObserver(token)
+            notificationToken = nil
         }
+        cancellables.removeAll()
     }
 
     func start() {
@@ -87,16 +64,56 @@ final class UsageMonitor: ObservableObject {
 
     func refreshAllOnce() async {
         guard let am = accountManager else { return }
-        for acc in am.accounts {
-            await refresh(accountID: acc.id)
+        let ids = am.accounts.map(\.id)
+        await withTaskGroup(of: Void.self) { group in
+            for id in ids {
+                group.addTask { [id] in await self.refresh(accountID: id) }
+            }
         }
+    }
+
+    /// 새 토큰 import / 스위치 직후 호출되어 backoff 를 풀고 즉시 재폴링.
+    func invalidateBackoff(for accountID: AccountID) {
+        nextEligibleAt[accountID] = nil
+        if lastError[accountID] != nil { lastError[accountID] = nil }
+        Task { await refresh(accountID: accountID) }
     }
 
     // MARK: - private
 
+    private func observeAccountChanges() {
+        notificationToken = NotificationCenter.default.addObserver(
+            forName: .ccAccountChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let self else { return }
+            let id = note.userInfo?["accountID"] as? AccountID
+            Task { @MainActor in
+                if let id { self.invalidateBackoff(for: id) }
+            }
+        }
+    }
+
+    /// AccountManager.accounts 변경 시 cached snapshots 재로드 + 삭제된 id prune.
+    /// init 순서에 의존하지 않도록 — 원천 차단.
+    private func observeAccountListChanges() {
+        accountManager?.$accounts
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.loadCachedSnapshots() }
+            .store(in: &cancellables)
+    }
+
+    /// 디스크 캐시 로드 + 삭제된 계정의 dict 항목 prune.
     private func loadCachedSnapshots() {
         guard let am = accountManager else { return }
-        for acc in am.accounts {
+        let validIDs = Set(am.accounts.map(\.id))
+        // prune
+        snapshots = snapshots.filter { validIDs.contains($0.key) }
+        lastError = lastError.filter { validIDs.contains($0.key) }
+        nextEligibleAt = nextEligibleAt.filter { validIDs.contains($0.key) }
+        // load 누락된 것
+        for acc in am.accounts where snapshots[acc.id] == nil {
             if let s = try? snapshotStore.readUsage(for: acc.id) {
                 snapshots[acc.id] = s
             }
@@ -121,38 +138,80 @@ final class UsageMonitor: ObservableObject {
 
     private func refreshInactive() async {
         guard let am = accountManager else { return }
-        for acc in am.accounts where acc.id != am.activeAccountID {
-            await refresh(accountID: acc.id)
+        let ids = am.accounts.map(\.id).filter { $0 != am.activeAccountID }
+        await withTaskGroup(of: Void.self) { group in
+            for id in ids {
+                group.addTask { [id] in await self.refresh(accountID: id) }
+            }
         }
     }
 
     private func refresh(accountID: AccountID) async {
-        // backoff 존중
+        Log.usage.info("[REFRESH enter] id=\(accountID, privacy: .public) backoff=\(self.nextEligibleAt[accountID]?.timeIntervalSinceNow ?? -1)")
         if let next = nextEligibleAt[accountID], next > clock.now() {
+            Log.usage.info("[REFRESH backoff-skip] id=\(accountID, privacy: .public)")
             return
         }
-        guard let snap = try? snapshotStore.read(for: accountID),
-              let creds = try? JSON.decode(ClaudeCredentialsRoot.self, from: snap.credentialsJSON)
-        else {
-            return
+        // 활성 계정은 ~/.claude/.credentials.json 의 최신 토큰 사용 (Claude Code 가
+        // 주기적으로 refresh 하므로 snapshot 의 stale 토큰 사용 시 영구 401 위험).
+        let token: String
+        let isActive = accountManager?.activeAccountID == accountID
+        if isActive,
+           let liveData = liveActiveCredentials(),
+           let live = try? JSON.decode(ClaudeCredentialsRoot.self, from: liveData) {
+            token = live.claudeAiOauth.accessToken
+            Log.usage.info("[REFRESH live-token] id=\(accountID, privacy: .public)")
+            // 활성 계정 snapshot 도 latest 로 sync (다음 스위치 시 활용)
+            if let cur = try? snapshotStore.read(for: accountID) {
+                let newSnap = ClaudeProfileSnapshot(oauthAccountJSON: cur.oauthAccountJSON,
+                                                    credentialsJSON: liveData)
+                try? snapshotStore.write(newSnap, for: accountID)
+            }
+        } else {
+            guard let snap = try? snapshotStore.read(for: accountID),
+                  let creds = try? JSON.decode(ClaudeCredentialsRoot.self, from: snap.credentialsJSON)
+            else { return }
+            token = creds.claudeAiOauth.accessToken
         }
-        let token = creds.claudeAiOauth.accessToken
         do {
             let usage = try await client.fetch(accessToken: token)
-            snapshots[accountID] = usage
-            lastError[accountID] = nil
-            try? snapshotStore.writeUsage(usage, for: accountID)
+            Log.usage.info("[REFRESH ok] id=\(accountID, privacy: .public) 5h=\(usage.fiveHourUtilization) 7d=\(usage.sevenDayUtilization ?? -1)")
+            if !isSameVisible(usage, snapshots[accountID]) {
+                snapshots[accountID] = usage
+                try? snapshotStore.writeUsage(usage, for: accountID)
+            }
+            if lastError[accountID] != nil { lastError[accountID] = nil }
         } catch UsageClientError.unauthorized {
-            // 토큰 만료/무효 — 사용자에게 재로그인 안내. 주기적 재시도 차단.
-            lastError[accountID] = "unauthorized"
-            nextEligibleAt[accountID] = clock.now().addingTimeInterval(15 * 60)
+            Log.usage.error("[REFRESH 401] id=\(accountID, privacy: .public)")
+            setError(accountID, "unauthorized")
+            // 1분 backoff. Claude Code 명령 한 번이면 자동 refresh → 다음 폴링에서 회복.
+            nextEligibleAt[accountID] = clock.now().addingTimeInterval(60)
         } catch UsageClientError.rateLimited(let retry) {
             let wait = retry.flatMap { max($0, 30) } ?? 60
+            Log.usage.error("[REFRESH 429] id=\(accountID, privacy: .public) wait=\(wait)")
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(wait)
-            lastError[accountID] = "rate_limited"
+            setError(accountID, "rate_limited")
         } catch {
-            lastError[accountID] = String(describing: error)
+            Log.usage.error("[REFRESH err] id=\(accountID, privacy: .public) err=\(String(describing: error), privacy: .public)")
+            setError(accountID, String(describing: error))
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(120)
         }
+    }
+
+    private func liveActiveCredentials() -> Data? {
+        try? ClaudeLiveCredentials.readRaw()
+    }
+
+    private func setError(_ id: AccountID, _ msg: String) {
+        if lastError[id] != msg { lastError[id] = msg }
+    }
+
+    /// fetchedAt 외 표시용 필드가 같으면 동일로 간주.
+    private func isSameVisible(_ a: UsageSnapshot, _ b: UsageSnapshot?) -> Bool {
+        guard let b else { return false }
+        return a.fiveHourUtilization == b.fiveHourUtilization
+            && a.fiveHourResetsAt == b.fiveHourResetsAt
+            && a.sevenDayUtilization == b.sevenDayUtilization
+            && a.sevenDayResetsAt == b.sevenDayResetsAt
     }
 }

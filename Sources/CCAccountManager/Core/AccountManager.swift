@@ -11,7 +11,6 @@ final class AccountManager: ObservableObject {
     private let repo: AccountRepositoryProtocol
     private let snapshots: ProfileSnapshotStoreProtocol
     private let configFile: ClaudeConfigFile
-    private let credFile: ClaudeCredentialsFile
     private let processGuard: ClaudeProcessGuard
     private let backups: BackupRotator
     private let switcher: SwitchTransaction
@@ -20,17 +19,14 @@ final class AccountManager: ObservableObject {
     init(repo: AccountRepositoryProtocol = AccountRepository(),
          snapshots: ProfileSnapshotStoreProtocol = ProfileSnapshotStore(),
          configFile: ClaudeConfigFile = ClaudeConfigFile(),
-         credFile: ClaudeCredentialsFile = ClaudeCredentialsFile(),
          processGuard: ClaudeProcessGuard = ClaudeProcessGuard(),
          backups: BackupRotator = BackupRotator()) {
         self.repo = repo
         self.snapshots = snapshots
         self.configFile = configFile
-        self.credFile = credFile
         self.processGuard = processGuard
         self.backups = backups
         self.switcher = SwitchTransaction(configFile: configFile,
-                                          credFile: credFile,
                                           snapshotStore: snapshots,
                                           backups: backups,
                                           processGuard: processGuard,
@@ -39,20 +35,26 @@ final class AccountManager: ObservableObject {
 
     func reload() {
         do {
-            accounts = try repo.load().sorted { ($0.lastUsedAt ?? $0.addedAt) > ($1.lastUsedAt ?? $1.addedAt) }
-            activeAccountID = try detectActiveAccountID()
-            lastError = nil
+            let next = try repo.load()
+                .sorted { ($0.lastUsedAt ?? $0.addedAt) > ($1.lastUsedAt ?? $1.addedAt) }
+            if next != accounts { accounts = next }
+            let nextActive = try detectActiveAccountID(in: next)
+            if nextActive != activeAccountID { activeAccountID = nextActive }
+            if lastError != nil { lastError = nil }
         } catch {
-            lastError = String(describing: error)
-            Log.app.error("reload failed: \(String(describing: error))")
+            let msg = String(describing: error)
+            if lastError != msg { lastError = msg }
+            Log.app.error("reload failed: \(msg)")
         }
     }
 
     /// 현재 Claude Code 활성 계정을 import. 같은 accountUuid 가 이미 있으면 갱신.
+    /// credentials 는 Keychain 우선 → 파일 fallback (macOS 가 새 로그인/refresh 시
+    /// Keychain 만 갱신하고 파일은 부재/stale 인 동작 회피).
     @discardableResult
     func importCurrent(label: String? = nil, colorHex: String? = nil) throws -> Account {
         let oauthData = try configFile.readOAuthAccountJSON()
-        let credsData = try credFile.readRaw()
+        let credsData = try ClaudeLiveCredentials.readRaw()
         let oauth = try JSON.decode(ClaudeOAuthAccount.self, from: oauthData)
 
         var accounts = try repo.load()
@@ -134,27 +136,20 @@ final class AccountManager: ObservableObject {
         return email
     }
 
-    private func detectActiveAccountID() throws -> AccountID? {
+    private func detectActiveAccountID(in list: [Account]) throws -> AccountID? {
         let oauth = try configFile.readOAuthAccount()
-        return accounts.first { $0.accountUuid == oauth.accountUuid }?.id
+        return list.first { $0.accountUuid == oauth.accountUuid }?.id
     }
 }
 
 extension Account {
-    /// 이메일(또는 임의 식별자) 기반 결정적 컬러. Swift Hasher 는 런타임 시드 랜덤화로
-    /// 비결정적이므로 FNV-1a (32-bit) 로 안정화. 같은 입력 → 항상 같은 색.
-    /// 이메일을 기준으로 하면 같은 이니셜의 다른 계정도 색으로 구분됨.
+    /// 이메일(또는 임의 식별자) 기반 결정적 컬러. 같은 입력 → 항상 같은 색.
     static func deterministicColor(for seed: String) -> String {
         let palette = [
             "#3478F6", "#34C759", "#FF9500", "#FF3B30",
             "#AF52DE", "#5AC8FA", "#FF2D55", "#A2845E",
             "#30B0C7", "#BF5AF2"
         ]
-        var h: UInt32 = 0x811c9dc5
-        for byte in seed.utf8 {
-            h ^= UInt32(byte)
-            h &*= 0x01000193
-        }
-        return palette[Int(h % UInt32(palette.count))]
+        return palette[Int(FNV.hash32(seed) % UInt32(palette.count))]
     }
 }
