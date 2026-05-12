@@ -14,8 +14,15 @@ enum ClaudeConfigError: Error, CustomStringConvertible {
     }
 }
 
+protocol ClaudeConfigFileProtocol: AnyObject {
+    func readRaw() throws -> Data
+    func readOAuthAccountJSON() throws -> Data
+    func readOAuthAccount() throws -> ClaudeOAuthAccount
+    func patchOAuthAccount(_ oauthAccountJSON: Data) throws
+}
+
 /// `~/.claude.json` 의 `oauthAccount` 필드만 안전하게 R/W. 나머지 234KB는 보존.
-final class ClaudeConfigFile {
+final class ClaudeConfigFile: ClaudeConfigFileProtocol {
     private let url: URL
     init(url: URL = Paths.claudeConfig) { self.url = url }
 

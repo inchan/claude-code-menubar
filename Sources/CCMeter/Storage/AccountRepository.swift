@@ -6,8 +6,10 @@ protocol AccountRepositoryProtocol: AnyObject {
 }
 
 final class AccountRepository: AccountRepositoryProtocol {
+    private let url: URL
+    init(url: URL = Paths.accountsFile) { self.url = url }
+
     func load() throws -> [Account] {
-        let url = Paths.accountsFile
         guard FileManager.default.fileExists(atPath: url.path) else { return [] }
         let data = try Data(contentsOf: url)
         if data.isEmpty { return [] }
@@ -16,6 +18,6 @@ final class AccountRepository: AccountRepositoryProtocol {
 
     func save(_ accounts: [Account]) throws {
         let data = try JSON.encode(accounts)
-        try AtomicFileWriter.write(data, to: Paths.accountsFile, permissions: 0o600)
+        try AtomicFileWriter.write(data, to: url, permissions: 0o600)
     }
 }

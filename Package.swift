@@ -13,6 +13,11 @@ let package = Package(
         .executableTarget(
             name: "CCMeter",
             path: "Sources/CCMeter"
+        ),
+        .testTarget(
+            name: "CCMeterTests",
+            dependencies: ["CCMeter"],
+            path: "Tests/CCMeterTests"
         )
     ]
 )

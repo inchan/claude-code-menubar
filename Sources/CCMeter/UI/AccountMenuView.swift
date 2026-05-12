@@ -106,13 +106,53 @@ struct AccountMenuView: View {
 
     private func handleSwitch(to id: AccountID) {
         do {
-            try manager.switchTo(id)
-            lastError = nil
-            Task { await monitor.refreshActiveOnce() }
+            try performSwitch(to: id)
         } catch SwitchError.claudeRunning {
-            lastError = "Claude Code 가 실행 중입니다. 모든 세션 종료 후 재시도."
+            // Claude CLI 가 stale 토큰을 캐시하면 401 또는 사용량 카운팅 오류 가능.
+            // 사용자 확인 후에만 우회 — UI 가 우회 경로의 유일한 게이트.
+            guard confirmForceSwitch() else {
+                lastError = "Claude Code 가 실행 중입니다. 모든 세션 종료 후 재시도."
+                return
+            }
+            do {
+                try performSwitch(to: id, allowWhileClaudeRunning: true)
+            } catch {
+                lastError = "강제 전환 실패: \(String(describing: error))"
+            }
         } catch {
             lastError = "전환 실패: \(String(describing: error))"
         }
+    }
+
+    private func performSwitch(to id: AccountID, allowWhileClaudeRunning: Bool = false) throws {
+        try manager.switchTo(id, allowWhileClaudeRunning: allowWhileClaudeRunning)
+        lastError = nil
+        Task { await monitor.refreshActiveOnce() }
+    }
+
+    private func confirmForceSwitch() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Claude Code 실행 중 — 강제 전환"
+        alert.informativeText = """
+        실행 중인 Claude Code 세션이 감지되었습니다.
+
+        강제 전환하면 진행 중인 세션이 이전 토큰을 캐시한 상태로 남아 401 \
+        또는 사용량 카운팅 오류가 발생할 수 있습니다. 가능하면 진행 중인 \
+        응답을 마친 뒤 전환하시길 권장합니다.
+
+        그래도 지금 전환하시겠습니까?
+        """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "강제 전환")
+        alert.addButton(withTitle: "취소")
+        // macOS 14+ 의 무인자 activate() 가 권장. 메뉴바 앱이 background 일 때
+        // alert 가 뒤에 숨지 않도록 명시 활성화.
+        if #available(macOS 14, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        alert.window.level = .floating
+        return alert.runModal() == .alertFirstButtonReturn
     }
 }

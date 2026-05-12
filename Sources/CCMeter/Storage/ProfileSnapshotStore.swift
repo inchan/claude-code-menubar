@@ -12,9 +12,16 @@ final class ProfileSnapshotStore: ProfileSnapshotStoreProtocol {
     private let configFileName = "claude-config.json"
     private let credentialsFileName = "claude-credentials.json"
     private let usageFileName = "usage.json"
+    private let root: URL
+
+    init(root: URL = Paths.snapshotsDir) { self.root = root }
+
+    private func dir(for id: AccountID) -> URL {
+        root.appendingPathComponent(id, isDirectory: true)
+    }
 
     func read(for id: AccountID) throws -> ClaudeProfileSnapshot? {
-        let dir = Paths.snapshotDir(for: id)
+        let dir = dir(for: id)
         let configURL = dir.appendingPathComponent(configFileName)
         let credURL = dir.appendingPathComponent(credentialsFileName)
         guard FileManager.default.fileExists(atPath: configURL.path),
@@ -29,7 +36,7 @@ final class ProfileSnapshotStore: ProfileSnapshotStoreProtocol {
     /// 두 파일 동시 커밋. staging tmp 두 개를 모두 성공적으로 작성한 뒤
     /// rename 두 번을 연속 호출. 첫 rename 성공 + 둘째 실패 시 첫 파일을 즉시 백업본으로 복원.
     func write(_ snapshot: ClaudeProfileSnapshot, for id: AccountID) throws {
-        let dir = Paths.snapshotDir(for: id)
+        let dir = dir(for: id)
         try FileManager.default.createDirectory(at: dir,
                                                 withIntermediateDirectories: true,
                                                 attributes: [.posixPermissions: NSNumber(value: 0o700)])
@@ -61,19 +68,23 @@ final class ProfileSnapshotStore: ProfileSnapshotStoreProtocol {
     }
 
     func writeUsage(_ usage: UsageSnapshot, for id: AccountID) throws {
-        let url = Paths.snapshotDir(for: id).appendingPathComponent(usageFileName)
+        let dir = dir(for: id)
+        try FileManager.default.createDirectory(at: dir,
+                                                withIntermediateDirectories: true,
+                                                attributes: [.posixPermissions: NSNumber(value: 0o700)])
+        let url = dir.appendingPathComponent(usageFileName)
         try AtomicFileWriter.write(JSON.encode(usage), to: url, permissions: 0o600)
     }
 
     func readUsage(for id: AccountID) throws -> UsageSnapshot? {
-        let url = Paths.snapshotDir(for: id).appendingPathComponent(usageFileName)
+        let url = dir(for: id).appendingPathComponent(usageFileName)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         let data = try Data(contentsOf: url)
         return try JSON.decode(UsageSnapshot.self, from: data)
     }
 
     func remove(for id: AccountID) throws {
-        let dir = Paths.snapshotDir(for: id)
+        let dir = dir(for: id)
         if FileManager.default.fileExists(atPath: dir.path) {
             try FileManager.default.removeItem(at: dir)
         }

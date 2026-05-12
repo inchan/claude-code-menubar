@@ -12,8 +12,14 @@ enum ClaudeCredentialsError: Error, CustomStringConvertible {
     }
 }
 
+protocol ClaudeCredentialsFileProtocol: AnyObject {
+    func readRaw() throws -> Data
+    func read() throws -> ClaudeCredentialsRoot
+    func writeRaw(_ data: Data) throws
+}
+
 /// `~/.claude/.credentials.json` 전체 R/W. 항상 0600.
-final class ClaudeCredentialsFile {
+final class ClaudeCredentialsFile: ClaudeCredentialsFileProtocol {
     private let url: URL
     init(url: URL = Paths.claudeCredentials) { self.url = url }
 

@@ -1,7 +1,11 @@
 import Foundation
 
+protocol ClaudeProcessGuardProtocol: Sendable {
+    func isClaudeRunning() -> Bool
+}
+
 /// Claude Code CLI 실행 중인지 검사. 실행 중이면 스위치 차단.
-struct ClaudeProcessGuard {
+struct ClaudeProcessGuard: ClaudeProcessGuardProtocol {
     /// `pgrep -fx '^node .*claude'` 류로는 false-positive 가 많아 ps + 정밀 매칭 사용.
     func isClaudeRunning() -> Bool {
         guard let lines = runPS() else { return false }
@@ -17,7 +21,8 @@ struct ClaudeProcessGuard {
         return false
     }
 
-    private func matchesClaudeProcess(_ cmd: String) -> Bool {
+    /// 명령행 한 줄이 Claude CLI 시그니처에 매칭되는지. 단위 테스트 용도로 internal.
+    func matchesClaudeProcess(_ cmd: String) -> Bool {
         // node /path/to/claude/cli.js ...  또는  /usr/local/bin/claude ...
         let lowered = cmd.lowercased()
         // 우리 자신(CCMeter) 또는 기타 'claude' 문자열 포함 프로세스 제외
@@ -37,16 +42,19 @@ struct ClaudeProcessGuard {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/ps")
         task.arguments = ["-Ao", "pid,command"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        task.standardOutput = outPipe
+        task.standardError = errPipe
         do {
             try task.run()
-            task.waitUntilExit()
         } catch {
             return nil
         }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        // 파이프 버퍼 고갈 데드락 방지 — read 후 waitUntilExit 순서 유지.
+        let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+        _ = errPipe.fileHandleForReading.readDataToEndOfFile()
+        task.waitUntilExit()
         guard let s = String(data: data, encoding: .utf8) else { return nil }
         return s.split(separator: "\n").map(String.init)
     }

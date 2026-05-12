@@ -72,6 +72,14 @@
 - **소스 로깅**: helper 가 매 read 시 `[CRED-SRC] keychain|file|none` 을 로깅 → 회귀 즉시 진단.
 - **차단**: `grep -rn "ClaudeCredentialsFile().readRaw\|ClaudeCredentialsFile()" Sources/`
   결과가 helper 자체를 제외하고 0 이어야 함.
+- **WRITE 정책 (스위치 시)**: read 가 Keychain 우선이므로, 활성 자료 교체는 **파일 +
+  Keychain 둘 다** 갱신해야 한다. 한 쪽만 갱신되면:
+  - 파일만 갱신: `ClaudeLiveCredentials` 가 stale Keychain 토큰을 읽어 폴링이 **이전
+    계정의 사용량을 새 계정 카드 자리에 표시** (관찰된 회귀)
+  - Keychain만 갱신: Claude Code CLI 가 파일을 우선 보는 경로에서 stale
+- **WRITE 구현**: `SwitchTransaction.executeLocked` 의 교체 + 검증 + rollback 세 곳에서
+  `ClaudeCredentialsFile.writeRaw` 와 `ClaudeKeychainCredentials.writeRaw` 를 쌍으로 호출.
+  검증은 `ClaudeKeychainCredentials.readRaw()` 로 expiresAt 일치도 확인.
 
 ## 검증 명령
 
@@ -95,4 +103,9 @@ grep -rn "ClaudeCredentialsFile()" Sources/ \
 
 # CRED-SRC 로깅 — 런타임에 어느 소스에서 읽었는지 확인
 log show --info --predicate 'subsystem == "com.inchan.ccmeter"' --last 5m | grep CRED-SRC
+
+# 스위치 시 Keychain 쓰기 누락 적발 — 파일 write 와 Keychain write 가 쌍으로 호출되는지
+grep -n "credFile.writeRaw\|ClaudeKeychainCredentials.writeRaw" \
+    Sources/CCMeter/Core/SwitchTransaction.swift
+# 결과: writeRaw 쌍이 같은 do 블록에 함께 등장해야 함 (교체 + rollback 양쪽)
 ```

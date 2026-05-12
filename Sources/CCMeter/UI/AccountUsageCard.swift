@@ -123,17 +123,17 @@ struct UsageProgressRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
-                    .font(AppFonts.swiftUI(size: 12, weight: .medium))
+                    .font(AppFonts.swiftUI(size: 11, weight: .medium))
                     .tracking(0.4)
                 Spacer()
                 Text(percentText)
-                    .font(AppFonts.swiftUI(size: 12, weight: .semibold))
+                    .font(AppFonts.swiftUI(size: 11, weight: .semibold))
                     .tracking(0.4)
                     .foregroundColor(level?.color(overrides: overrides) ?? .secondary)
             }
             ProgressBarShape(percent: utilization ?? 0,
                              color: (level ?? .healthy).color(overrides: overrides))
-                .frame(height: 3)
+                .frame(height: 2)
             if let reset = resetsAt {
                 Text(formatResetTime(reset))
                     .font(AppFonts.swiftUI(size: 10, weight: .medium))
