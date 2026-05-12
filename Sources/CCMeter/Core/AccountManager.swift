@@ -10,27 +10,34 @@ final class AccountManager: ObservableObject {
 
     private let repo: AccountRepositoryProtocol
     private let snapshots: ProfileSnapshotStoreProtocol
-    private let configFile: ClaudeConfigFile
-    private let processGuard: ClaudeProcessGuard
+    private let configFile: ClaudeConfigFileProtocol
+    private let processGuard: ClaudeProcessGuardProtocol
     private let backups: BackupRotator
     private let switcher: SwitchTransaction
     private let authCLI = ClaudeAuthCLI()
+    private let liveCredsReadRaw: @Sendable () throws -> Data
 
     init(repo: AccountRepositoryProtocol = AccountRepository(),
          snapshots: ProfileSnapshotStoreProtocol = ProfileSnapshotStore(),
-         configFile: ClaudeConfigFile = ClaudeConfigFile(),
-         processGuard: ClaudeProcessGuard = ClaudeProcessGuard(),
-         backups: BackupRotator = BackupRotator()) {
+         configFile: ClaudeConfigFileProtocol = ClaudeConfigFile(),
+         processGuard: ClaudeProcessGuardProtocol = ClaudeProcessGuard(),
+         backups: BackupRotator = BackupRotator(),
+         liveCredsReadRaw: @Sendable @escaping () throws -> Data = ClaudeLiveCredentials.readRaw,
+         switcher: SwitchTransaction? = nil) {
         self.repo = repo
         self.snapshots = snapshots
         self.configFile = configFile
         self.processGuard = processGuard
         self.backups = backups
-        self.switcher = SwitchTransaction(configFile: configFile,
-                                          snapshotStore: snapshots,
-                                          backups: backups,
-                                          processGuard: processGuard,
-                                          accountRepo: repo)
+        self.liveCredsReadRaw = liveCredsReadRaw
+        self.switcher = switcher ?? SwitchTransaction(
+            configFile: configFile,
+            snapshotStore: snapshots,
+            backups: backups,
+            processGuard: processGuard,
+            accountRepo: repo,
+            liveCredsReadRaw: liveCredsReadRaw
+        )
     }
 
     func reload() {
@@ -54,7 +61,7 @@ final class AccountManager: ObservableObject {
     @discardableResult
     func importCurrent(label: String? = nil, colorHex: String? = nil) throws -> Account {
         let oauthData = try configFile.readOAuthAccountJSON()
-        let credsData = try ClaudeLiveCredentials.readRaw()
+        let credsData = try liveCredsReadRaw()
         let oauth = try JSON.decode(ClaudeOAuthAccount.self, from: oauthData)
 
         var accounts = try repo.load()

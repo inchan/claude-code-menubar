@@ -13,6 +13,7 @@ final class UsageMonitor: ObservableObject {
     private let snapshotStore: ProfileSnapshotStoreProtocol
     private let settingsStore: SettingsStoreProtocol
     private let clock: ClockProtocol
+    private let liveCredsReadRaw: @Sendable () -> Data?
 
     private var activeTimer: Timer?
     private var inactiveTimer: Timer?
@@ -23,12 +24,14 @@ final class UsageMonitor: ObservableObject {
          client: UsageClientProtocol = UsageClient(),
          snapshotStore: ProfileSnapshotStoreProtocol = ProfileSnapshotStore(),
          settingsStore: SettingsStoreProtocol = SettingsStore(),
-         clock: ClockProtocol = SystemClock()) {
+         clock: ClockProtocol = SystemClock(),
+         liveCredsReadRaw: @Sendable @escaping () -> Data? = { try? ClaudeLiveCredentials.readRaw() }) {
         self.accountManager = accountManager
         self.client = client
         self.snapshotStore = snapshotStore
         self.settingsStore = settingsStore
         self.clock = clock
+        self.liveCredsReadRaw = liveCredsReadRaw
         // init 시점에 accounts 가 비어 있어도 OK — 아래 observer 가 reload 시 자동 채움.
         loadCachedSnapshots()
         observeAccountChanges()
@@ -199,7 +202,7 @@ final class UsageMonitor: ObservableObject {
     }
 
     private func liveActiveCredentials() -> Data? {
-        try? ClaudeLiveCredentials.readRaw()
+        liveCredsReadRaw()
     }
 
     private func setError(_ id: AccountID, _ msg: String) {
