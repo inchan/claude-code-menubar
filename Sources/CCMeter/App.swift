@@ -38,6 +38,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         monitor.start()
 
+        // 사용자가 토글 on 으로 저장했는데 재설치/재서명으로 BTM 등록이 stale 인 경우
+        // 시작 시 자동 재등록. 실패해도 흐름 차단하지 않음.
+        LaunchAtLoginService.reconcileAtLaunch(desiredOn: settings.settings.launchAtLogin)
+
         Log.app.info("CCMeter started (bundleId=\(Bundle.main.bundleIdentifier ?? "?"))")
     }
 

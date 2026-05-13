@@ -86,7 +86,8 @@ final class StatusItemController {
             .flatMap { sn in sn.sevenDayUtilization.map { s.usageDisplayMode.display(utilization: $0) } }
         let fLevel = (s.usageVisibility.showsSession ? snap : nil).map(\.fiveHourLevel.rawValue) ?? "-"
         let sLevel = (s.usageVisibility.showsWeekly ? snap : nil).map(\.sevenDayLevel.rawValue) ?? "-"
-        let key = "\(acc?.initial ?? "?")|\(acc?.colorHex ?? "")|\(s.menuBarStyle.rawValue)|\(fiveDisplay.map(String.init) ?? "-")|\(fLevel)|\(sevenDisplay.map(String.init) ?? "-")|\(sLevel)|\(s.colorOverrides.description)"
+        let warning = activeNeedsAttention
+        let key = "\(acc?.initial ?? "?")|\(acc?.colorHex ?? "")|\(s.menuBarStyle.rawValue)|\(fiveDisplay.map(String.init) ?? "-")|\(fLevel)|\(sevenDisplay.map(String.init) ?? "-")|\(sLevel)|\(s.colorOverrides.description)|w=\(warning)"
         if key == lastImageKey { return }
         lastImageKey = key
         button.image = StatusIconRenderer.renderStatusBar(
@@ -97,8 +98,18 @@ final class StatusItemController {
             sevenDay: sevenDisplay,
             sevenLevel: s.usageVisibility.showsWeekly ? snap?.sevenDayLevel : nil,
             style: s.menuBarStyle,
-            colorOverrides: s.colorOverrides
+            colorOverrides: s.colorOverrides,
+            warning: warning
         )
+        button.toolTip = warning
+            ? "🔐 Keychain 접근 권한 필요 — 메뉴를 열어 새로고침으로 다시 요청하세요"
+            : nil
+    }
+
+    /// 활성 계정에 사용자 개입이 필요한 상태 (현재는 Keychain 권한 거부).
+    private var activeNeedsAttention: Bool {
+        guard let id = manager.activeAccountID else { return false }
+        return monitor.lastError[id] == "keychain_denied"
     }
 
     @objc private func togglePopover(_ sender: AnyObject?) {

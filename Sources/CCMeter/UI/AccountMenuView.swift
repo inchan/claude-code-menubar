@@ -79,6 +79,16 @@ struct AccountMenuView: View {
     private var actionRow: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
+                Task { await monitor.refreshAllOnce() }
+            } label: {
+                Label("새로고침", systemImage: "arrow.clockwise")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("r")
+
+            Button {
                 SettingsWindowController.shared.show(manager: manager,
                                                      monitor: monitor,
                                                      settings: settings)

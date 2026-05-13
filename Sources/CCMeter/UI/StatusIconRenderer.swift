@@ -2,12 +2,15 @@ import AppKit
 
 enum StatusIconRenderer {
     /// 메뉴바용 이니셜 + 색상 원형 아이콘 (단독 사용).
-    static func render(initial: String, hex: String, size: CGFloat = 18) -> NSImage {
+    static func render(initial: String, hex: String, size: CGFloat = 18,
+                       warning: Bool = false) -> NSImage {
         let pxSize = NSSize(width: size, height: size)
         let image = NSImage(size: pxSize)
         image.lockFocusFlipped(false)
         defer { image.unlockFocus() }
-        drawCircle(initial: initial, hex: hex, in: NSRect(origin: .zero, size: pxSize))
+        let rect = NSRect(origin: .zero, size: pxSize)
+        drawCircle(initial: initial, hex: hex, in: rect)
+        if warning { drawWarningBadge(in: rect) }
         image.isTemplate = false
         return image
     }
@@ -20,7 +23,8 @@ enum StatusIconRenderer {
                                 sevenDay: Int?,
                                 sevenLevel: ThresholdLevel?,
                                 style: MenuBarStyle = .percent,
-                                colorOverrides: [String: String] = [:]) -> NSImage {
+                                colorOverrides: [String: String] = [:],
+                                warning: Bool = false) -> NSImage {
         // 메뉴바 슬롯 높이는 22pt. 이미지 height 를 동일하게 맞춰야 시스템이
         // 자동 위쪽 정렬을 하지 않는다. 원형 아이콘은 18pt 유지하고 22pt 안에서 가운데.
         let height: CGFloat = 22
@@ -41,7 +45,8 @@ enum StatusIconRenderer {
         if style == .progress {
             return renderProgressStyle(initial: initial, hex: hex, items: items,
                                        height: height, circleSize: circleSize, gap: gap,
-                                       labelFont: labelFont, secondary: secondary)
+                                       labelFont: labelFont, secondary: secondary,
+                                       warning: warning)
         }
 
         // percent 텍스트 스타일
@@ -64,9 +69,9 @@ enum StatusIconRenderer {
         let image = NSImage(size: NSSize(width: totalWidth, height: height),
                             flipped: false) { _ in
             let circleY = (height - circleSize) / 2
-            drawCircle(initial: initial, hex: hex,
-                       in: NSRect(x: 0, y: circleY,
-                                  width: circleSize, height: circleSize))
+            let circleRect = NSRect(x: 0, y: circleY, width: circleSize, height: circleSize)
+            drawCircle(initial: initial, hex: hex, in: circleRect)
+            if warning { drawWarningBadge(in: circleRect) }
             let textBoxHeight = attrs.first?.1.height
                 ?? (labelFont.ascender - labelFont.descender)
             let textY = (height - textBoxHeight) / 2
@@ -85,7 +90,8 @@ enum StatusIconRenderer {
     private static func renderProgressStyle(initial: String, hex: String,
                                             items: [(label: String, percent: Int, color: NSColor)],
                                             height: CGFloat, circleSize: CGFloat, gap: CGFloat,
-                                            labelFont: NSFont, secondary: NSColor) -> NSImage {
+                                            labelFont: NSFont, secondary: NSColor,
+                                            warning: Bool = false) -> NSImage {
         let barWidth: CGFloat = 36
         let barHeight: CGFloat = 5
         let labelGap: CGFloat = 6
@@ -104,9 +110,9 @@ enum StatusIconRenderer {
         let image = NSImage(size: NSSize(width: totalWidth, height: height),
                             flipped: false) { _ in
             let circleY = (height - circleSize) / 2
-            drawCircle(initial: initial, hex: hex,
-                       in: NSRect(x: 0, y: circleY,
-                                  width: circleSize, height: circleSize))
+            let circleRect = NSRect(x: 0, y: circleY, width: circleSize, height: circleSize)
+            drawCircle(initial: initial, hex: hex, in: circleRect)
+            if warning { drawWarningBadge(in: circleRect) }
             var x: CGFloat = circleSize + gap
             if items.isEmpty {
                 let attr = NSAttributedString(string: "--", attributes: measureAttrs)
@@ -141,6 +147,36 @@ enum StatusIconRenderer {
     }
 
     // MARK: - private
+
+    /// 원형 아이콘 우상단에 주황색 경고 배지(작은 원 + "!"). Keychain 권한 거부 등
+    /// 사용자 개입이 필요한 상태를 메뉴바에서 즉시 인지하도록.
+    private static func drawWarningBadge(in circleRect: NSRect) {
+        let badgeSize = circleRect.width * 0.55
+        let badgeRect = NSRect(
+            x: circleRect.maxX - badgeSize + 1,
+            y: circleRect.maxY - badgeSize + 1,
+            width: badgeSize,
+            height: badgeSize
+        )
+        // 흰색 stroke ring 으로 본체 원과 분리감.
+        NSColor.white.setFill()
+        NSBezierPath(ovalIn: badgeRect.insetBy(dx: -1, dy: -1)).fill()
+        NSColor.systemOrange.setFill()
+        NSBezierPath(ovalIn: badgeRect).fill()
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.boldSystemFont(ofSize: badgeSize * 0.75),
+            .foregroundColor: NSColor.white
+        ]
+        let text = NSAttributedString(string: "!", attributes: attrs)
+        let size = text.size()
+        let textRect = NSRect(
+            x: badgeRect.minX + (badgeRect.width - size.width) / 2,
+            y: badgeRect.minY + (badgeRect.height - size.height) / 2,
+            width: size.width,
+            height: size.height
+        )
+        text.draw(in: textRect)
+    }
 
     private static func drawCircle(initial: String, hex: String, in rect: NSRect) {
         let fillColor = NSColor(hex: hex) ?? .systemBlue

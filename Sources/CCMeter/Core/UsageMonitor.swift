@@ -14,6 +14,7 @@ final class UsageMonitor: ObservableObject {
     private let settingsStore: SettingsStoreProtocol
     private let clock: ClockProtocol
     private let liveCredsReadRaw: @Sendable () -> Data?
+    private let keychainProbe: @Sendable () -> ClaudeKeychainCredentials.AccessState
 
     private var activeTimer: Timer?
     private var inactiveTimer: Timer?
@@ -25,13 +26,15 @@ final class UsageMonitor: ObservableObject {
          snapshotStore: ProfileSnapshotStoreProtocol = ProfileSnapshotStore(),
          settingsStore: SettingsStoreProtocol = SettingsStore(),
          clock: ClockProtocol = SystemClock(),
-         liveCredsReadRaw: @Sendable @escaping () -> Data? = { try? ClaudeLiveCredentials.readRaw() }) {
+         liveCredsReadRaw: @Sendable @escaping () -> Data? = { try? ClaudeLiveCredentials.readRaw() },
+         keychainProbe: @Sendable @escaping () -> ClaudeKeychainCredentials.AccessState = ClaudeKeychainCredentials.readDetailed) {
         self.accountManager = accountManager
         self.client = client
         self.snapshotStore = snapshotStore
         self.settingsStore = settingsStore
         self.clock = clock
         self.liveCredsReadRaw = liveCredsReadRaw
+        self.keychainProbe = keychainProbe
         // init 시점에 accounts 가 비어 있어도 OK — 아래 observer 가 reload 시 자동 채움.
         loadCachedSnapshots()
         observeAccountChanges()
@@ -151,6 +154,18 @@ final class UsageMonitor: ObservableObject {
 
     private func refresh(accountID: AccountID) async {
         Log.usage.info("[REFRESH enter] id=\(accountID, privacy: .public) backoff=\(self.nextEligibleAt[accountID]?.timeIntervalSinceNow ?? -1)")
+        let isActive = accountManager?.activeAccountID == accountID
+        // 활성 계정은 Keychain 권한 거부를 우선 감지. stale 파일 토큰으로 fallback 하면
+        // 영구 401 + 화면에 어제 사용량이 그대로 남는 회귀가 발생함.
+        if isActive {
+            if case .accessDenied(let status) = keychainProbe() {
+                Log.usage.error("[REFRESH keychain-denied] id=\(accountID, privacy: .public) status=\(status)")
+                setError(accountID, "keychain_denied")
+                // 짧은 backoff — 사용자가 popover 를 다시 열거나 새로고침 누르면 즉시 재시도.
+                nextEligibleAt[accountID] = clock.now().addingTimeInterval(15)
+                return
+            }
+        }
         if let next = nextEligibleAt[accountID], next > clock.now() {
             Log.usage.info("[REFRESH backoff-skip] id=\(accountID, privacy: .public)")
             return
@@ -158,7 +173,6 @@ final class UsageMonitor: ObservableObject {
         // 활성 계정은 ~/.claude/.credentials.json 의 최신 토큰 사용 (Claude Code 가
         // 주기적으로 refresh 하므로 snapshot 의 stale 토큰 사용 시 영구 401 위험).
         let token: String
-        let isActive = accountManager?.activeAccountID == accountID
         if isActive,
            let liveData = liveActiveCredentials(),
            let live = try? JSON.decode(ClaudeCredentialsRoot.self, from: liveData) {

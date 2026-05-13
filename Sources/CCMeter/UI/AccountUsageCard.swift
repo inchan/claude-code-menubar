@@ -20,8 +20,8 @@ struct AccountUsageCard: View {
         VStack(alignment: .leading, spacing: 12) {
             header
             progressRows
-            if let err = error, usage == nil {
-                Text(err == "unauthorized" ? "재로그인 필요" : "조회 실패: \(err)")
+            if let err = error, !errorText(err).isEmpty {
+                Text(errorText(err))
                     .font(AppFonts.swiftUI(size: 10, weight: .medium))
                     .tracking(0.4)
                     .foregroundColor(.orange)
@@ -57,6 +57,19 @@ struct AccountUsageCard: View {
         }
     }
 
+    /// keychain_denied 는 usage 가 있어도 stale 표시이므로 항상 안내. unauthorized 는
+    /// 캐시된 usage 만 있을 때 노출 의미가 약해 기존처럼 usage 없을 때만 노출.
+    private func errorText(_ err: String) -> String {
+        switch err {
+        case "keychain_denied":
+            return "🔐 Keychain 접근 권한 필요 — '새로고침' 으로 다시 요청하세요"
+        case "unauthorized":
+            return usage == nil ? "재로그인 필요" : ""
+        default:
+            return usage == nil ? "조회 실패: \(err)" : ""
+        }
+    }
+
     private var sessionRow: UsageProgressRow {
         UsageProgressRow(title: "세션 사용량",
                          utilization: usage?.fiveHourUtilization,
@@ -80,7 +93,8 @@ struct AccountUsageCard: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 5) {
             Image(nsImage: StatusIconRenderer.render(initial: account.initial,
-                                                     hex: account.colorHex, size: 16.8))
+                                                     hex: account.colorHex, size: 16.8,
+                                                     warning: error == "keychain_denied"))
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(account.label)

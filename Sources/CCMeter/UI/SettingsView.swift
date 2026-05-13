@@ -374,23 +374,56 @@ private struct ColorsPanel: View {
 private struct SystemPanel: View {
     @ObservedObject var settings: AppSettingsStore
     @State private var error: String?
+    @State private var statusTick: Int = 0  // BTM 상태 재조회 트리거
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("시스템").font(AppFonts.swiftUI(size: 14))
             Toggle("로그인 시 자동 실행", isOn: Binding(
-                get: { settings.settings.launchAtLogin },
+                get: {
+                    // 디스크 의도 + 시스템 실제 등록 상태가 모두 충족되어야 on.
+                    // 디스크만 보면 stale 등록 상태에서 사용자가 "on 인데 안 됨" 으로 인지.
+                    _ = statusTick
+                    return settings.settings.launchAtLogin && LaunchAtLoginService.isEnabled
+                },
                 set: { newVal in
-                    do { try LaunchAtLoginService.setEnabled(newVal); settings.setLaunchAtLogin(newVal); error = nil }
-                    catch { self.error = "설정 실패: \(String(describing: error))" }
+                    do {
+                        try LaunchAtLoginService.setEnabled(newVal)
+                        settings.setLaunchAtLogin(newVal)
+                        error = nil
+                    } catch {
+                        self.error = launchAtLoginErrorText(error)
+                    }
+                    statusTick += 1
                 }
             ))
             .font(AppFonts.swiftUI(size: 12))
+            if LaunchAtLoginService.requiresUserApproval {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("⚠️ 시스템 설정에서 로그인 항목 승인이 필요합니다")
+                        .font(AppFonts.swiftUI(size: 10, weight: .medium))
+                        .foregroundColor(.orange)
+                    Button("시스템 설정 → 로그인 항목 열기") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .font(AppFonts.swiftUI(size: 10))
+                }
+            }
             if let err = error {
                 Text(err).font(AppFonts.swiftUI(size: 10)).foregroundColor(.red)
             }
             Spacer()
         }
+        .onAppear { statusTick += 1 }
+    }
+
+    private func launchAtLoginErrorText(_ error: Error) -> String {
+        if LaunchAtLoginService.requiresUserApproval {
+            return "시스템 설정 → 일반 → 로그인 항목 에서 CCMeter 를 허용하세요"
+        }
+        return "설정 실패: \(String(describing: error))"
     }
 }
 

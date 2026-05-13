@@ -20,8 +20,26 @@ enum ClaudeKeychainCredentials {
         }
     }
 
+    /// Keychain access 상태 — 항목 없음 / 권한 거부 / 기타 실패 구분.
+    /// 권한 거부는 시작 시 사용자가 "Don't Allow" 누른 경우. read 만 봐서는
+    /// "항목 없음" 과 "권한 거부" 가 둘 다 nil 로 합쳐져 UI 가 stale 토큰 fallback 으로
+    /// 흘러가므로 별도 분기 필요.
+    enum AccessState: Equatable {
+        case ok(Data)
+        case notFound
+        case accessDenied(OSStatus)
+        case otherFailure(OSStatus)
+    }
+
     /// Keychain 의 plaintext (JSON bytes) 반환. 항목 없거나 권한 거부 시 nil.
+    /// 호출자가 두 케이스를 구분해야 하면 `readDetailed()` 사용.
     static func readRaw() -> Data? {
+        if case .ok(let data) = readDetailed() { return data }
+        return nil
+    }
+
+    /// 상태 분기가 필요한 호출자(예: UsageMonitor) 용. ACL 권한 거부를 별도 케이스로.
+    static func readDetailed() -> AccessState {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -30,8 +48,17 @@ enum ClaudeKeychainCredentials {
         ]
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess else { return nil }
-        return item as? Data
+        switch status {
+        case errSecSuccess:
+            if let data = item as? Data { return .ok(data) }
+            return .otherFailure(status)
+        case errSecItemNotFound:
+            return .notFound
+        case errSecAuthFailed, errSecUserCanceled, errSecInteractionNotAllowed:
+            return .accessDenied(status)
+        default:
+            return .otherFailure(status)
+        }
     }
 
     /// "Claude Code-credentials" generic password 항목을 `data` 로 교체.
