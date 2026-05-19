@@ -1,25 +1,25 @@
-# CCMeter
+# Claude Code Menubar
 
 > 메뉴바에서 Claude Code 계정을 전환하고, 5h · 7d 사용량을 항상 본다.
 
 <p align="center">
-  <img src="docs/screenshots/popover.jpg" alt="CCMeter popover" height="380">
+  <img src="docs/screenshots/popover.jpg" alt="Claude Code Menubar popover" height="380">
   &nbsp;
-  <img src="docs/screenshots/demo.gif" alt="CCMeter demo" height="380">
+  <img src="docs/screenshots/demo.gif" alt="Claude Code Menubar demo" height="380">
 </p>
 
 ## 무엇을 해결하나
 
 Claude Code 를 여러 계정으로 쓸 때, 한도(5시간 세션 · 7일 주간)에 걸리면 `~/.claude.json` 의 `oauthAccount` 와 `~/.claude/.credentials.json` 두 파일을 손으로 갈아끼워야 합니다. 잘못 덮으면 토큰이 깨지고, 작업 중 전환하면 실행 중인 CLI 가 stale 토큰으로 401 을 받습니다.
 
-CCMeter 는 이 교체를 메뉴바에서 한 번의 클릭으로, **atomic write · 자동 백업 · 단일 진입 lock** 과 함께 처리합니다. 동시에 모든 등록 계정의 잔량과 리셋 시각을 항상 보여주므로, 한도가 차기 전에 미리 옮길 수 있습니다.
+Claude Code Menubar 는 이 교체를 메뉴바에서 한 번의 클릭으로, **atomic write · 자동 백업 · 단일 진입 lock** 과 함께 처리합니다. 동시에 모든 등록 계정의 잔량과 리셋 시각을 항상 보여주므로, 한도가 차기 전에 미리 옮길 수 있습니다.
 
 ## 설치
 
 ```sh
 make app
 make install
-open ~/Applications/CCMeter.app
+open ~/Applications/ClaudeCodeMenubar.app
 ```
 
 요구 사항: macOS 13+ · Swift 6.0+. 안정 코드 사인은 `make setup-cert` 한 번이면 됩니다.
@@ -45,7 +45,7 @@ open ~/Applications/CCMeter.app
 - **자동 백업** — timestamp 백업 5개 보관, 실패 시 자동 복원
 - **충돌 방지** — Claude Code CLI 실행 중에는 전환 차단
 
-데이터는 자체 디렉터리 `~/.ccmeter/` 에만 저장하며, 다른 도구의 데이터는 건드리지 않습니다.
+데이터는 자체 디렉터리 `~/.claude-code-menubar/` 에만 저장하며, 다른 도구의 데이터는 건드리지 않습니다.
 
 ---
 

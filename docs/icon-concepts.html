@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>CCMeter — Icon Concepts (30 시안)</title>
+<style>
+  :root {
+    --bg: #0e0f12;
+    --card: #1a1c21;
+    --line: #2a2d34;
+    --text: #e6e8ec;
+    --muted: #8b919c;
+    --accent: #d97757;
+    --accent-2: #b85d3f;
+    --ok: #6ee7b7;
+    --warn: #fbbf24;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif; }
+  header { padding: 32px 40px 16px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .pillrow { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { font-size: 11px; padding: 3px 10px; border-radius: 999px; background: #23262d; color: var(--muted); }
+  .pill.on { background: var(--accent); color: #1a0f08; }
+
+  main { padding: 28px 40px 60px; }
+  section h2 { font-size: 13px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin: 28px 0 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 14px 12px; display: flex; flex-direction: column; align-items: center;
+    transition: border-color 0.15s, transform 0.15s; }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .icon-box { width: 128px; height: 128px; display: flex; align-items: center;
+    justify-content: center; background: linear-gradient(135deg, #15161a 0%, #1f2128 100%);
+    border-radius: 22px; margin-bottom: 12px; }
+  .icon-box.menubar { background: #2c2c2c; border-radius: 0; width: 100%; height: 36px; margin-bottom: 8px;
+    justify-content: flex-end; padding-right: 14px; }
+  .icon-box.menubar svg { width: 22px; height: 22px; }
+  .meta { width: 100%; text-align: center; }
+  .meta .no { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+  .meta .name { font-size: 13px; font-weight: 600; margin: 2px 0 2px; }
+  .meta .desc { font-size: 11px; color: var(--muted); line-height: 1.45; }
+
+  .legend { display: flex; gap: 18px; margin-top: 18px; font-size: 11px; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px;
+    border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
+  .legend .l-orange::before { background: var(--accent); }
+  .legend .l-ok::before { background: var(--ok); }
+  .legend .l-warn::before { background: var(--warn); }
+  .legend .l-bad::before { background: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>CCMeter — Icon Concepts (30 시안)</h1>
+  <p>
+    프로젝트 컨셉: macOS 메뉴바에서 Claude Code 계정 전환 + 5h 세션 · 7d 주간 사용량 미터링.
+    핵심 키워드: <b>메뉴바 / 미터·게이지 / 계정 전환 / 안전한 교체(atomic·lock) / 두 개의 사이클(5h·7d)</b>.
+  </p>
+  <div class="pillrow">
+    <span class="pill on">메뉴바 친화 (Template Image, 단색 22pt)</span>
+    <span class="pill">앱 아이콘 (컬러, squircle)</span>
+    <span class="pill">미터 · 게이지 · 사이클</span>
+    <span class="pill">계정 · 멀티 · 전환</span>
+  </div>
+  <div class="legend">
+    <span class="l-orange">Claude orange</span>
+    <span class="l-ok">정상</span>
+    <span class="l-warn">경고</span>
+    <span class="l-bad">한도 임박</span>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <h2>그룹 A — 미터 / 게이지 (사용량 시각화)</h2>
+  <div class="grid">
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#d97757"/><stop offset="1" stop-color="#b85d3f"/>
+          </linearGradient></defs>
+          <path d="M20 70 A30 30 0 0 1 80 70" stroke="#2a2d34" stroke-width="9" fill="none" stroke-linecap="round"/>
+          <path d="M20 70 A30 30 0 0 1 65 47" stroke="url(#g1)" stroke-width="9" fill="none" stroke-linecap="round"/>
+          <circle cx="50" cy="70" r="3.5" fill="#e6e8ec"/>
+          <line x1="50" y1="70" x2="62" y2="55" stroke="#e6e8ec" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">A · 01</div><div class="name">Single Arc Meter</div><div class="desc">고전 게이지, 사용량을 한눈에.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="50" cy="50" r="34" stroke="#2a2d34" stroke-width="7" fill="none"/>
+          <circle cx="50" cy="50" r="34" stroke="#d97757" stroke-width="7" fill="none"
+            stroke-dasharray="160 999" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          <circle cx="50" cy="50" r="22" stroke="#2a2d34" stroke-width="7" fill="none"/>
+          <circle cx="50" cy="50" r="22" stroke="#fbbf24" stroke-width="7" fill="none"
+            stroke-dasharray="60 999" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">A · 02</div><div class="name">Dual Ring (5h · 7d)</div><div class="desc">두 사이클을 동심원으로.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <rect x="20" y="35" width="55" height="30" rx="6" stroke="#e6e8ec" stroke-width="3" fill="none"/>
+          <rect x="76" y="44" width="6" height="12" rx="2" fill="#e6e8ec"/>
+          <rect x="24" y="39" width="32" height="22" rx="3" fill="#d97757"/>
+          <text x="48" y="56" font-size="14" font-family="SF Pro,system-ui" font-weight="700" fill="#fff" text-anchor="middle">CC</text>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">A · 03</div><div class="name">Battery · CC</div><div class="desc">잔량 + CC 모노그램.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <path d="M30 18 L70 18 L70 32 L52 50 L70 68 L70 82 L30 82 L30 68 L48 50 L30 32 Z"
+            fill="none" stroke="#e6e8ec" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M32 20 L68 20 L52 48 Z" fill="#d97757"/>
+          <path d="M50 52 L62 70 L38 70 Z" fill="#d97757" opacity="0.4"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">A · 04</div><div class="name">Hourglass</div><div class="desc">5h 세션의 시간 메타포.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <rect x="22" y="58" width="14" height="26" rx="3" fill="#d97757"/>
+          <rect x="43" y="40" width="14" height="44" rx="3" fill="#fbbf24"/>
+          <rect x="64" y="22" width="14" height="62" rx="3" fill="#f87171"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">A · 05</div><div class="name">Threshold Bars</div><div class="desc">정상/경고/임박 3색 막대.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <path d="M15 72 A38 38 0 0 1 85 72" stroke="#2a2d34" stroke-width="5" fill="none"/>
+          <path d="M15 72 A38 38 0 0 1 50 34" stroke="#6ee7b7" stroke-width="5" fill="none"/>
+          <path d="M50 34 A38 38 0 0 1 76 48" stroke="#fbbf24" stroke-width="5" fill="none"/>
+          <path d="M76 48 A38 38 0 0 1 85 72" stroke="#f87171" stroke-width="5" fill="none"/>
+          <line x1="50" y1="72" x2="68" y2="50" stroke="#e6e8ec" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="50" cy="72" r="4" fill="#e6e8ec"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">A · 06</div><div class="name">Speedometer</div><div class="desc">정통 미터 — 이름과 직결.</div></div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2>그룹 B — 계정 / 멀티 / 전환</h2>
+  <div class="grid">
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="36" cy="36" r="14" fill="#d97757"/>
+          <circle cx="64" cy="64" r="14" fill="#6ee7b7"/>
+          <path d="M50 28 L70 28 L66 22 M70 28 L66 34" stroke="#e6e8ec" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M50 72 L30 72 L34 66 M30 72 L34 78" stroke="#e6e8ec" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">B · 07</div><div class="name">Swap Accounts</div><div class="desc">두 계정 교체를 직설적으로.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="34" cy="50" r="18" fill="#fbbf24" stroke="#1a1c21" stroke-width="3"/>
+          <circle cx="50" cy="50" r="18" fill="#6ee7b7" stroke="#1a1c21" stroke-width="3"/>
+          <circle cx="66" cy="50" r="18" fill="#d97757" stroke="#1a1c21" stroke-width="3"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">B · 08</div><div class="name">Account Stack</div><div class="desc">멀티 계정 — 활성은 앞면.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="32" cy="50" r="12" stroke="#d97757" stroke-width="4" fill="none"/>
+          <rect x="40" y="46" width="38" height="8" fill="#d97757"/>
+          <rect x="60" y="54" width="6" height="10" fill="#d97757"/>
+          <rect x="70" y="54" width="6" height="10" fill="#d97757"/>
+          <path d="M50 28 A22 22 0 0 1 78 28" stroke="#6ee7b7" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M78 28 L74 24 M78 28 L74 32" stroke="#6ee7b7" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">B · 09</div><div class="name">Key Rotate</div><div class="desc">자격증명(키) 회전.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <rect x="18" y="24" width="64" height="52" rx="8" stroke="#e6e8ec" stroke-width="3" fill="none"/>
+          <circle cx="34" cy="42" r="7" fill="#d97757"/>
+          <rect x="46" y="38" width="26" height="4" rx="2" fill="#e6e8ec"/>
+          <rect x="46" y="46" width="18" height="3" rx="1.5" fill="#8b919c"/>
+          <rect x="26" y="60" width="48" height="6" rx="3" fill="#2a2d34"/>
+          <rect x="26" y="60" width="32" height="6" rx="3" fill="#6ee7b7"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">B · 10</div><div class="name">Account Card + Meter</div><div class="desc">계정 카드에 잔량 합성.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="50" cy="50" r="34" stroke="#2a2d34" stroke-width="3" fill="none"/>
+          <path d="M30 50 A20 20 0 0 1 70 50" stroke="#d97757" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path d="M70 50 L64 44 M70 50 L64 56" stroke="#d97757" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path d="M70 50 A20 20 0 0 1 30 50" stroke="#6ee7b7" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path d="M30 50 L36 44 M30 50 L36 56" stroke="#6ee7b7" stroke-width="5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">B · 11</div><div class="name">Cycle Switch</div><div class="desc">순환 화살표 — 무한 전환.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="50" cy="50" r="34" stroke="#2a2d34" stroke-width="3" fill="none"/>
+          <circle cx="50" cy="22" r="6" fill="#d97757"/>
+          <circle cx="74" cy="64" r="6" fill="#6ee7b7"/>
+          <circle cx="26" cy="64" r="6" fill="#fbbf24"/>
+          <line x1="50" y1="50" x2="50" y2="26" stroke="#e6e8ec" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="50" cy="50" r="4" fill="#e6e8ec"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">B · 12</div><div class="name">Account Dial</div><div class="desc">계정을 다이얼로 선택.</div></div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2>그룹 C — 메뉴바 (Template Image, 단색, 22pt)</h2>
+  <div class="grid">
+
+    <div class="card">
+      <div class="icon-box menubar">
+        <svg viewBox="0 0 22 22"><path d="M3 16 A9 9 0 0 1 19 16" stroke="#e6e8ec" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <circle cx="14" cy="9" r="1.8" fill="#e6e8ec"/></svg>
+      </div>
+      <div class="meta"><div class="no">C · 13</div><div class="name">Arc + Tick</div><div class="desc">메뉴바: 미세한 게이지.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box menubar">
+        <svg viewBox="0 0 22 22">
+          <circle cx="11" cy="11" r="7" stroke="#e6e8ec" stroke-width="2" fill="none"/>
+          <circle cx="11" cy="11" r="3" fill="#e6e8ec"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">C · 14</div><div class="name">Bullseye</div><div class="desc">정밀한 ‘조준’ 인상.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box menubar">
+        <svg viewBox="0 0 22 22">
+          <path d="M9 6 A5 5 0 1 0 9 16" stroke="#e6e8ec" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path d="M16 6 A5 5 0 1 0 16 16" stroke="#e6e8ec" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">C · 15</div><div class="name">CC Monogram</div><div class="desc">두 C — Claude Code.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box menubar">
+        <svg viewBox="0 0 22 22">
+          <rect x="4" y="13" width="3" height="5" rx="1" fill="#e6e8ec"/>
+          <rect x="9.5" y="9" width="3" height="9" rx="1" fill="#e6e8ec"/>
+          <rect x="15" y="5" width="3" height="13" rx="1" fill="#e6e8ec"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">C · 16</div><div class="name">Step Bars</div><div class="desc">미터의 절제된 형태.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box menubar">
+        <svg viewBox="0 0 22 22">
+          <path d="M6 4 L16 4 L16 7 L12 11 L16 15 L16 18 L6 18 L6 15 L10 11 L6 7 Z"
+            fill="none" stroke="#e6e8ec" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M7 5 L15 5 L11 10 Z" fill="#e6e8ec"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">C · 17</div><div class="name">Hourglass · mini</div><div class="desc">5h 세션 — 시간 강조.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box menubar">
+        <svg viewBox="0 0 22 22">
+          <circle cx="11" cy="11" r="8" stroke="#e6e8ec" stroke-width="2" fill="none" stroke-dasharray="30 60" transform="rotate(-90 11 11)"/>
+          <circle cx="11" cy="11" r="4.5" stroke="#e6e8ec" stroke-width="2" fill="none" stroke-dasharray="10 60" transform="rotate(-90 11 11)"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">C · 18</div><div class="name">Dual Arc · mini</div><div class="desc">5h·7d 동심원 메뉴바판.</div></div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2>그룹 D — 안전 / Atomic / 신뢰</h2>
+  <div class="grid">
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <path d="M50 16 L78 26 L78 52 Q78 76 50 86 Q22 76 22 52 L22 26 Z"
+            fill="none" stroke="#d97757" stroke-width="3.5" stroke-linejoin="round"/>
+          <path d="M34 56 A18 18 0 0 1 66 56" stroke="#d97757" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <line x1="50" y1="56" x2="60" y2="46" stroke="#d97757" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">D · 19</div><div class="name">Shield + Gauge</div><div class="desc">안전한 미터 — atomic 강조.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="50" cy="50" r="32" stroke="#2a2d34" stroke-width="6" fill="none"/>
+          <circle cx="50" cy="50" r="32" stroke="#d97757" stroke-width="6" fill="none"
+            stroke-dasharray="140 999" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          <path d="M42 48 V42 a8 8 0 0 1 16 0 V48" stroke="#e6e8ec" stroke-width="3" fill="none"/>
+          <rect x="38" y="48" width="24" height="18" rx="3" fill="#e6e8ec"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">D · 20</div><div class="name">Lock + Ring</div><div class="desc">단일 진입 lock + 미터.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <ellipse cx="50" cy="50" rx="34" ry="14" stroke="#d97757" stroke-width="3" fill="none"/>
+          <ellipse cx="50" cy="50" rx="34" ry="14" stroke="#6ee7b7" stroke-width="3" fill="none" transform="rotate(60 50 50)"/>
+          <ellipse cx="50" cy="50" rx="34" ry="14" stroke="#fbbf24" stroke-width="3" fill="none" transform="rotate(-60 50 50)"/>
+          <circle cx="50" cy="50" r="5" fill="#e6e8ec"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">D · 21</div><div class="name">Atomic</div><div class="desc">atomic write의 메타.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="50" cy="50" r="34" stroke="#2a2d34" stroke-width="6" fill="none"/>
+          <circle cx="50" cy="50" r="34" stroke="#6ee7b7" stroke-width="6" fill="none"
+            stroke-dasharray="180 999" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          <path d="M36 52 L46 62 L66 40" stroke="#6ee7b7" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">D · 22</div><div class="name">Verified</div><div class="desc">검증된 상태 — 신뢰성.</div></div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2>그룹 E — 통합 / 추상 / 상징</h2>
+  <div class="grid">
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <path d="M78 30 A30 30 0 1 0 78 70" stroke="#d97757" stroke-width="10" fill="none" stroke-linecap="round"/>
+          <circle cx="78" cy="30" r="5" fill="#e6e8ec"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">E · 23</div><div class="name">C as Gauge</div><div class="desc">‘C’ 자체가 게이지.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <path d="M50 30 A20 20 0 1 0 50 70" stroke="#d97757" stroke-width="8" fill="none" stroke-linecap="round"/>
+          <path d="M50 30 A20 20 0 1 1 50 70" stroke="#6ee7b7" stroke-width="8" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">E · 24</div><div class="name">CC Pair</div><div class="desc">두 C — 계정의 짝.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="50" cy="50" r="36" stroke="#2a2d34" stroke-width="3" fill="none"/>
+          <path d="M18 50 L34 50 L40 36 L48 64 L56 42 L62 50 L82 50"
+            stroke="#d97757" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">E · 25</div><div class="name">Pulse</div><div class="desc">활성 사용 — 살아있는 미터.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <path d="M28 20 H72 L52 50 L72 80 H28 L48 50 Z" fill="#d97757"/>
+          <circle cx="50" cy="46" r="2" fill="#fff"/>
+          <circle cx="54" cy="42" r="1.5" fill="#fff"/>
+          <circle cx="46" cy="44" r="1.5" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">E · 26</div><div class="name">Sand</div><div class="desc">남은 모래알 — 한도 임박.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="50" cy="50" r="32" fill="#d97757"/>
+          <circle cx="50" cy="50" r="32" stroke="#b85d3f" stroke-width="3" fill="none"/>
+          <circle cx="50" cy="50" r="22" stroke="#fff" stroke-width="3" fill="none" stroke-dasharray="3 5"/>
+          <text x="50" y="56" font-size="18" font-weight="800" fill="#fff" text-anchor="middle" font-family="SF Pro,system-ui">CC</text>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">E · 27</div><div class="name">Token Chip</div><div class="desc">토큰/계정의 칩 메타.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <rect x="14" y="20" width="60" height="46" rx="6" stroke="#e6e8ec" stroke-width="3" fill="none"/>
+          <circle cx="22" cy="28" r="2" fill="#f87171"/>
+          <circle cx="29" cy="28" r="2" fill="#fbbf24"/>
+          <circle cx="36" cy="28" r="2" fill="#6ee7b7"/>
+          <line x1="20" y1="40" x2="68" y2="40" stroke="#8b919c" stroke-width="2"/>
+          <line x1="20" y1="48" x2="56" y2="48" stroke="#8b919c" stroke-width="2"/>
+          <circle cx="74" cy="72" r="16" fill="#d97757"/>
+          <path d="M66 74 A8 8 0 0 1 82 74" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <circle cx="78" cy="69" r="1.5" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">E · 28</div><div class="name">Terminal + Meter</div><div class="desc">Claude Code(터미널)에 미터 배지.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <rect x="22" y="20" width="56" height="60" rx="10" stroke="#e6e8ec" stroke-width="3" fill="none"/>
+          <rect x="30" y="32" width="40" height="14" rx="3" fill="#2a2d34"/>
+          <text x="50" y="43" font-size="10" font-weight="700" fill="#d97757" text-anchor="middle" font-family="SF Pro,system-ui">78%</text>
+          <circle cx="36" cy="60" r="5" fill="#d97757"/>
+          <circle cx="50" cy="60" r="5" fill="#fbbf24"/>
+          <circle cx="64" cy="60" r="5" fill="#6ee7b7"/>
+          <rect x="36" y="70" width="28" height="4" rx="2" fill="#8b919c"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">E · 29</div><div class="name">Dispenser</div><div class="desc">계정 디스플레이 + 잔량.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="icon-box">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <defs>
+            <linearGradient id="gFin" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#d97757"/>
+              <stop offset="1" stop-color="#7a3a26"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="36" fill="url(#gFin)"/>
+          <circle cx="62" cy="42" r="28" fill="#15161a"/>
+          <circle cx="32" cy="38" r="3" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="meta"><div class="no">E · 30</div><div class="name">Crescent Mark</div><div class="desc">최소주의 — 앱 마크 후보.</div></div>
+    </div>
+
+  </div>
+</section>
+
+</main>
+</body>
+</html>

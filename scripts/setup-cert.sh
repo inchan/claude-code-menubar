@@ -3,7 +3,7 @@
 # stable codesign identity → Keychain ACL 영구 trust → 빌드마다 prompt 회피.
 set -euo pipefail
 
-SIGN_NAME="${SIGN_NAME:-CCMeter Dev}"
+SIGN_NAME="${SIGN_NAME:-Claude Code Menubar Dev}"
 
 if security find-identity -v -p codesigning 2>/dev/null | grep -q "\"$SIGN_NAME\""; then
     echo ">> 이미 '$SIGN_NAME' 인증서가 존재합니다 — 추가 작업 불필요"

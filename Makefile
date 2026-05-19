@@ -1,6 +1,6 @@
 SHELL := /bin/bash
-APP_NAME := CCMeter
-DISPLAY_NAME := CCMeter
+APP_NAME := ClaudeCodeMenubar
+DISPLAY_NAME := Claude Code Menubar
 BUILD_CONFIG := release
 BIN_PATH := .build/$(BUILD_CONFIG)/$(APP_NAME)
 APP_BUNDLE := build/$(DISPLAY_NAME).app
@@ -13,20 +13,24 @@ INSTALL_DIR := $(HOME)/Applications
 SIGN_NAME ?=
 SIGN_IDENTITY := $(shell bash scripts/detect-cert.sh "$(SIGN_NAME)")
 
-.PHONY: all build app install run clean test fmt setup-cert show-cert
+.PHONY: all build app install run clean test fmt setup-cert show-cert icon
 
 all: app
 
 build:
 	swift build -c $(BUILD_CONFIG)
 
-app: build
+icon:
+	@bash scripts/build-icon.sh
+
+app: build icon
 	@echo ">> Assembling .app bundle"
 	@rm -rf "$(APP_BUNDLE)"
 	@mkdir -p "$(APP_BUNDLE)/Contents/MacOS"
 	@mkdir -p "$(APP_BUNDLE)/Contents/Resources"
 	@cp "$(BIN_PATH)" "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)"
 	@cp Resources/Info.plist.template "$(APP_BUNDLE)/Contents/Info.plist"
+	@cp build/AppIcon.icns "$(APP_BUNDLE)/Contents/Resources/AppIcon.icns"
 	@if [ -d "$(BIN_PATH)_CCMeter.bundle" ]; then \
 		cp -R "$(BIN_PATH)_CCMeter.bundle/." "$(APP_BUNDLE)/Contents/Resources/"; \
 	fi

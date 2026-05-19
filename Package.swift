@@ -2,22 +2,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "CCMeter",
+    name: "ClaudeCodeMenubar",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "CCMeter", targets: ["CCMeter"])
+        .executable(name: "ClaudeCodeMenubar", targets: ["ClaudeCodeMenubar"])
     ],
     targets: [
         .executableTarget(
-            name: "CCMeter",
-            path: "Sources/CCMeter"
+            name: "ClaudeCodeMenubar",
+            path: "Sources/ClaudeCodeMenubar"
         ),
         .testTarget(
-            name: "CCMeterTests",
-            dependencies: ["CCMeter"],
-            path: "Tests/CCMeterTests"
+            name: "ClaudeCodeMenubarTests",
+            dependencies: ["ClaudeCodeMenubar"],
+            path: "Tests/ClaudeCodeMenubarTests"
         )
     ]
 )

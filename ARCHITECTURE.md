@@ -57,7 +57,7 @@
   width < 10 또는 height < 10 시 ERROR 로깅.
 - **이유**: 메뉴바 visibility 회귀는 시각 검증 없이는 발견이 어려움. 자동 self-check 로
   로그에서 즉시 드러남.
-- **운영**: `log show --info --predicate 'subsystem == "com.inchan.ccmeter"' --last 1m | grep SELF-CHECK`
+- **운영**: `log show --info --predicate 'subsystem == "com.inchan.claude-code-menubar"' --last 1m | grep SELF-CHECK`
 
 ## D7. 활성 Claude credentials 는 `ClaudeLiveCredentials` 단일 정의원으로만 read
 
@@ -85,7 +85,7 @@
 
 ```sh
 # 빌드 후 self-check 결과
-log show --info --predicate 'subsystem == "com.inchan.ccmeter"' --last 1m | grep SELF-CHECK
+log show --info --predicate 'subsystem == "com.inchan.claude-code-menubar"' --last 1m | grep SELF-CHECK
 
 # NSHostingController 직접 사용 적발
 grep -rn "NSHostingController(rootView:" Sources/
@@ -102,10 +102,10 @@ grep -rn "ClaudeCredentialsFile()" Sources/ \
 # 결과: SwitchTransaction 의 self.credFile = ClaudeCredentialsFile() (쓰기 전용) — 허용
 
 # CRED-SRC 로깅 — 런타임에 어느 소스에서 읽었는지 확인
-log show --info --predicate 'subsystem == "com.inchan.ccmeter"' --last 5m | grep CRED-SRC
+log show --info --predicate 'subsystem == "com.inchan.claude-code-menubar"' --last 5m | grep CRED-SRC
 
 # 스위치 시 Keychain 쓰기 누락 적발 — 파일 write 와 Keychain write 가 쌍으로 호출되는지
 grep -n "credFile.writeRaw\|ClaudeKeychainCredentials.writeRaw" \
-    Sources/CCMeter/Core/SwitchTransaction.swift
+    Sources/ClaudeCodeMenubar/Core/SwitchTransaction.swift
 # 결과: writeRaw 쌍이 같은 do 블록에 함께 등장해야 함 (교체 + rollback 양쪽)
 ```

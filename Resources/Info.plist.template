@@ -3,15 +3,19 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>CCMeter</string>
+    <string>Claude Code Menubar</string>
     <key>CFBundleExecutable</key>
-    <string>CCMeter</string>
+    <string>ClaudeCodeMenubar</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.inchan.ccmeter</string>
+    <string>com.inchan.claude-code-menubar</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>CCMeter</string>
+    <string>Claude Code Menubar</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
