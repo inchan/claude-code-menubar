@@ -5,7 +5,7 @@ import Combine
 @MainActor
 final class UsageMonitor: ObservableObject {
     @Published private(set) var snapshots: [AccountID: UsageSnapshot] = [:]
-    @Published private(set) var lastError: [AccountID: String] = [:]
+    @Published private(set) var lastError: [AccountID: AccountError] = [:]
     private var nextEligibleAt: [AccountID: Date] = [:]
 
     private weak var accountManager: AccountManager?
@@ -82,6 +82,18 @@ final class UsageMonitor: ObservableObject {
                 group.addTask { [id] in await self.refresh(accountID: id) }
             }
         }
+    }
+
+    /// 사용자가 메뉴바에서 명시적으로 "새로고침" 클릭한 경우 — 모든 계정의 backoff 클리어 후 즉시 폴링.
+    /// 자동 폴링과 달리 rate_limit/invalid_grant backoff 도 무시 (사용자 의도 우선).
+    /// await 으로 완료 대기 가능 — UI 가 spinner / disable 인디케이터에 사용.
+    func refreshAllForcing() async {
+        guard let am = accountManager else { return }
+        for id in am.accounts.map(\.id) {
+            nextEligibleAt[id] = nil
+            if lastError[id] != nil { lastError[id] = nil }
+        }
+        await refreshAllOnce()
     }
 
     /// 새 토큰 import / 스위치 직후 호출되어 backoff 를 풀고 즉시 재폴링.
@@ -168,7 +180,7 @@ final class UsageMonitor: ObservableObject {
         if isActive && useKeychain {
             if case .accessDenied(let status) = keychainProbe() {
                 Log.usage.error("[REFRESH keychain-denied] id=\(accountID, privacy: .public) status=\(status)")
-                setError(accountID, "keychain_denied")
+                setError(accountID, .keychainDenied)
                 nextEligibleAt[accountID] = clock.now().addingTimeInterval(15)
                 return
             }
@@ -212,16 +224,16 @@ final class UsageMonitor: ObservableObject {
                     Log.usage.error("[REFRESH retry-fail] id=\(accountID, privacy: .public) err=\(String(describing: error), privacy: .public)")
                 }
             }
-            setError(accountID, "unauthorized")
+            setError(accountID, .unauthorized)
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(60)
         } catch UsageClientError.rateLimited(let retry) {
             let wait = retry.flatMap { max($0, 30) } ?? 60
             Log.usage.error("[REFRESH 429] id=\(accountID, privacy: .public) wait=\(wait)")
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(wait)
-            setError(accountID, "rate_limited")
+            setError(accountID, .rateLimited)
         } catch {
             Log.usage.error("[REFRESH err] id=\(accountID, privacy: .public) err=\(String(describing: error), privacy: .public)")
-            setError(accountID, String(describing: error))
+            setError(accountID, .other(String(describing: error)))
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(120)
         }
     }
@@ -278,12 +290,12 @@ final class UsageMonitor: ObservableObject {
 
         do {
             let new = try await oauthRefresh.refresh(refreshToken: current.refreshToken, existing: current)
-            try saveRefreshedCredentials(accountID: accountID, new: new)
+            try saveRefreshedCredentials(accountID: accountID, current: current, new: new)
             Log.usage.info("[REFRESH-TOKEN ok] id=\(accountID, privacy: .public)")
             return new
         } catch OAuthRefreshError.invalidGrant(let msg) {
             Log.usage.error("[REFRESH-TOKEN invalid_grant] id=\(accountID, privacy: .public) msg=\(msg, privacy: .public)")
-            setError(accountID, "invalid_grant")
+            setError(accountID, .invalidGrant)
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(300)  // 5분 backoff — 재로그인 필요
             return nil
         } catch OAuthRefreshError.rateLimited(let retry) {
@@ -297,7 +309,11 @@ final class UsageMonitor: ObservableObject {
     }
 
     /// 새 credentials 를 snapshot 에 원자적 write. 기존 oauthAccount JSON 은 유지.
-    private func saveRefreshedCredentials(accountID: AccountID, new: ClaudeAiOAuth) throws {
+    /// access/refresh 둘 다 동일하면 skip (서버가 rotation 안 한 + access 도 같은 케이스 — 드물지만 가능).
+    private func saveRefreshedCredentials(accountID: AccountID, current: ClaudeAiOAuth, new: ClaudeAiOAuth) throws {
+        if new.accessToken == current.accessToken && new.refreshToken == current.refreshToken {
+            return
+        }
         let root = ClaudeCredentialsRoot(claudeAiOauth: new)
         let credData = try JSON.encode(root)
         let configData: Data = (try? snapshotStore.read(for: accountID)?.oauthAccountJSON) ?? Data("{}".utf8)
@@ -309,8 +325,8 @@ final class UsageMonitor: ObservableObject {
         liveCredsReadRaw()
     }
 
-    private func setError(_ id: AccountID, _ msg: String) {
-        if lastError[id] != msg { lastError[id] = msg }
+    private func setError(_ id: AccountID, _ err: AccountError) {
+        if lastError[id] != err { lastError[id] = err }
     }
 
     /// fetchedAt 외 표시용 필드가 같으면 동일로 간주.

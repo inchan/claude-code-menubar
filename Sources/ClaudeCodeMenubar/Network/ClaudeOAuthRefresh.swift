@@ -104,12 +104,13 @@ struct ClaudeOAuthRefresh: ClaudeOAuthRefreshProtocol {
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         req.timeoutInterval = 15
 
-        let body = formEncode([
-            "grant_type": "refresh_token",
-            "refresh_token": refreshToken,
-            "client_id": Self.clientID
-        ])
-        req.httpBody = body.data(using: .utf8)
+        var comps = URLComponents()
+        comps.queryItems = [
+            URLQueryItem(name: "grant_type", value: "refresh_token"),
+            URLQueryItem(name: "refresh_token", value: refreshToken),
+            URLQueryItem(name: "client_id", value: Self.clientID)
+        ]
+        req.httpBody = comps.percentEncodedQuery?.data(using: .utf8)
 
         let (data, response): (Data, URLResponse)
         do {
@@ -163,15 +164,4 @@ struct ClaudeOAuthRefresh: ClaudeOAuthRefreshProtocol {
         )
     }
 
-    private func formEncode(_ params: [String: String]) -> String {
-        var allowed = CharacterSet.urlQueryAllowed
-        allowed.remove(charactersIn: "&=+")
-        return params
-            .map { k, v in
-                let kEnc = k.addingPercentEncoding(withAllowedCharacters: allowed) ?? k
-                let vEnc = v.addingPercentEncoding(withAllowedCharacters: allowed) ?? v
-                return "\(kEnc)=\(vEnc)"
-            }
-            .joined(separator: "&")
-    }
 }

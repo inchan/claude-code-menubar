@@ -8,6 +8,7 @@ struct AccountMenuView: View {
     @ObservedObject var settings: AppSettingsStore
     @State private var lastOpenedAt: Date = .distantPast
     @State private var lastError: String?
+    @State private var isRefreshing: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -80,14 +81,26 @@ struct AccountMenuView: View {
     private var actionRow: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
-                Task { await monitor.refreshAllOnce() }
+                Task {
+                    isRefreshing = true
+                    await monitor.refreshAllForcing()
+                    isRefreshing = false
+                }
             } label: {
-                Label("새로고침", systemImage: "arrow.clockwise")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
+                HStack(spacing: 6) {
+                    if isRefreshing {
+                        ProgressView().controlSize(.small).scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    Text(isRefreshing ? "새로고침 중…" : "새로고침")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .keyboardShortcut("r")
+            .disabled(isRefreshing)
 
             Button {
                 SettingsWindowController.shared.show(manager: manager,
