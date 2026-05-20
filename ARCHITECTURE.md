@@ -81,6 +81,27 @@
   `ClaudeCredentialsFile.writeRaw` 와 `ClaudeKeychainCredentials.writeRaw` 를 쌍으로 호출.
   검증은 `ClaudeKeychainCredentials.readRaw()` 로 expiresAt 일치도 확인.
 
+## D8. 비활성 계정도 토큰 자동 refresh — `ClaudeOAuthRefresh`
+
+- **결정**: 비활성 계정의 stale access_token 도 `refresh_token` 으로 자동 재발급. 비공식 OAuth endpoint 사용.
+- **이유**: 비활성 계정은 스위치 전엔 Claude Code 가 토큰을 갱신할 수 없어 expiresAt 도달 후 영구 401 → 사용량 카드 stale.
+  `~/.claude/projects/*.jsonl` 로컬 로그 파싱은 계정 식별자 부재로 다중 계정 매핑 불가.
+- **endpoint**: `https://console.anthropic.com/v1/oauth/token` (1차) → `https://claude.ai/v1/oauth/token` (fallback).
+  실측: console 이 429 던지는 동안 claude.ai 가 200 응답하는 케이스 다수 — endpoint 별 rate limit 분리됨.
+  fallback 조건: transport / 5xx / 429.
+- **client_id**: `9d1c250a-e61b-44d9-88ed-5944d1962f5e` (Claude Code 공식 client, 5+ 독립 소스 교차 검증).
+- **rotation**: 응답에 새 `refresh_token` 있으면 snapshot 즉시 갱신, 없으면 기존 유지 (`rotation fallback`).
+- **trigger**: `UsageMonitor.refresh()` 가 (a) expiresAt - 5분 미만이면 사전 호출, (b) `/api/oauth/usage` 401 시 1회 retry.
+- **race 차단**: `refreshInFlight: Set<AccountID>` 로 per-account 직렬화. 활성 계정의 `~/.claude/.credentials.json` 은 절대 안 건드림 (Claude Code 와 race 회피, snapshot store 만 갱신).
+- **kill switch**: `settings.useAutoRefresh` (default true). OFF 시 기존 동작 (스위치 시점 토큰만 사용).
+- **장애 표시**: refresh 가 `invalid_grant` 면 `AccountError.invalidGrant` 로 UI 표시 + 5분 backoff. 사용자가 해당 계정으로 스위치 후 Claude Code 사용 → 새 토큰 자동 import.
+
+## D9. lastError 는 `AccountError` enum (stringly-typed 금지)
+
+- **결정**: `UsageMonitor.lastError` 의 값은 `AccountError` enum (`keychainDenied / unauthorized / invalidGrant / rateLimited / other(String)`).
+- **이유**: 옛 String 키 (`"keychain_denied"` 등) 비교는 오타 시 무음 버그 발생. enum 으로 컴파일 타임 보장.
+- **`.other(String)`**: 분류되지 않은 transport/decode 에러는 메시지 그대로 노출 — UI 가 "조회 실패: …" 형식으로 표시.
+
 ## 검증 명령
 
 ```sh
