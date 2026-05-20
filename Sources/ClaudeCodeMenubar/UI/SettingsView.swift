@@ -1360,7 +1360,7 @@ private struct AccountCardFinal: View {
     let isActive: Bool
     let isSelected: Bool
     let usage: UsageSnapshot?
-    let error: String?
+    let error: AccountError?
     let mode: UsageDisplayMode
     let visibility: UsageVisibility
     let overrides: [String: String]
@@ -1369,13 +1369,23 @@ private struct AccountCardFinal: View {
     let onSelect: () -> Void
     let onSwitch: (() -> Void)?
 
+    private func settingsErrorText(_ err: AccountError) -> String {
+        switch err {
+        case .keychainDenied: return "Keychain 접근 거부"
+        case .unauthorized:   return "재로그인 필요"
+        case .invalidGrant:   return "refresh 만료 — 재로그인 필요"
+        case .rateLimited:    return "잠시 후 재시도"
+        case .other(let m):   return "조회 실패: \(m)"
+        }
+    }
+
     var body: some View {
         Button(action: onSelect) {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 progressRows
                 if let err = error, usage == nil {
-                    Text(err == "unauthorized" ? "재로그인 필요" : "조회 실패: \(err)")
+                    Text(settingsErrorText(err))
                         .font(AppFonts.mono(size: 10))
                         .foregroundColor(CC.warn)
                 }

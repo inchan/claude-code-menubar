@@ -156,7 +156,7 @@ final class StatusItemController {
     /// 활성 계정에 사용자 개입이 필요한 상태 (현재는 Keychain 권한 거부).
     private var activeNeedsAttention: Bool {
         guard let id = manager.activeAccountID else { return false }
-        return monitor.lastError[id] == "keychain_denied"
+        return monitor.lastError[id] == .keychainDenied
     }
 
     private func startPulse(button: NSStatusBarButton) {

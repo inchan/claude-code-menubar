@@ -121,6 +121,16 @@ enum CCAccountChangedKind: String {
     case imported, switched, removed, renamed
 }
 
+/// UsageMonitor 가 계정별 마지막 에러 상태를 UI 에 노출하기 위한 enum.
+/// 알려진 4종 + 그 외 자유 텍스트.
+enum AccountError: Equatable, Sendable {
+    case keychainDenied
+    case unauthorized
+    case invalidGrant
+    case rateLimited
+    case other(String)
+}
+
 enum UsageDisplayMode: String, Codable, CaseIterable, Sendable {
     case used       // "사용한" 비율 (utilization 그대로)
     case remaining  // "남은" 비율 (100 - utilization)

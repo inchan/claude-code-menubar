@@ -147,7 +147,7 @@ final class UsageMonitorTests: XCTestCase {
         let env = makeEnv(clientMode: .unauthorized)
         await env.mon.refreshActiveOnce()
         let id = env.am.activeAccountID!
-        XCTAssertEqual(env.mon.lastError[id], "unauthorized")
+        XCTAssertEqual(env.mon.lastError[id], .unauthorized)
         // 다음 refresh 는 backoff 로 skip → callCount 증가 없음
         let before = env.client.callCount
         await env.mon.refreshActiveOnce()
@@ -158,7 +158,7 @@ final class UsageMonitorTests: XCTestCase {
         let env = makeEnv(clientMode: .rateLimited(retry: 90))
         await env.mon.refreshActiveOnce()
         let id = env.am.activeAccountID!
-        XCTAssertEqual(env.mon.lastError[id], "rate_limited")
+        XCTAssertEqual(env.mon.lastError[id], .rateLimited)
     }
 
     func testRefreshGenericErrorSetsBackoff() async {

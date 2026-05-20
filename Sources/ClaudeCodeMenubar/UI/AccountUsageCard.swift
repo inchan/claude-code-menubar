@@ -17,7 +17,7 @@ struct AccountUsageCard: View {
     let account: Account
     let isActive: Bool
     let usage: UsageSnapshot?
-    let error: String?
+    let error: AccountError?
     let mode: UsageDisplayMode
     let visibility: UsageVisibility
     let overrides: [String: String]
@@ -149,7 +149,7 @@ struct AccountUsageCard: View {
     private var avatar: some View {
         Image(nsImage: StatusIconRenderer.render(initial: account.initial,
                                                  hex: account.colorHex, size: 28,
-                                                 warning: error == "keychain_denied"))
+                                                 warning: error == .keychainDenied))
             .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -159,18 +159,18 @@ struct AccountUsageCard: View {
 
     /// keychain_denied 는 usage 가 있어도 stale 이므로 항상 안내.
     /// unauthorized / generic 은 usage 없을 때만 노출 (기존 동작 유지).
-    private func errorText(_ err: String) -> String {
+    private func errorText(_ err: AccountError) -> String {
         switch err {
-        case "keychain_denied":
+        case .keychainDenied:
             return "🔐 Keychain 접근 권한 필요 — '새로고침' 으로 다시 요청"
-        case "unauthorized":
+        case .unauthorized:
             return usage == nil ? "재로그인 필요" : ""
-        case "invalid_grant":
+        case .invalidGrant:
             return "🔑 refresh 만료 — Claude Code 로 재로그인 필요"
-        case "rate_limited":
+        case .rateLimited:
             return usage == nil ? "잠시 후 재시도" : ""
-        default:
-            return usage == nil ? "조회 실패: \(err)" : ""
+        case .other(let msg):
+            return usage == nil ? "조회 실패: \(msg)" : ""
         }
     }
 }

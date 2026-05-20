@@ -5,7 +5,7 @@ import Combine
 @MainActor
 final class UsageMonitor: ObservableObject {
     @Published private(set) var snapshots: [AccountID: UsageSnapshot] = [:]
-    @Published private(set) var lastError: [AccountID: String] = [:]
+    @Published private(set) var lastError: [AccountID: AccountError] = [:]
     private var nextEligibleAt: [AccountID: Date] = [:]
 
     private weak var accountManager: AccountManager?
@@ -180,7 +180,7 @@ final class UsageMonitor: ObservableObject {
         if isActive && useKeychain {
             if case .accessDenied(let status) = keychainProbe() {
                 Log.usage.error("[REFRESH keychain-denied] id=\(accountID, privacy: .public) status=\(status)")
-                setError(accountID, "keychain_denied")
+                setError(accountID, .keychainDenied)
                 nextEligibleAt[accountID] = clock.now().addingTimeInterval(15)
                 return
             }
@@ -224,16 +224,16 @@ final class UsageMonitor: ObservableObject {
                     Log.usage.error("[REFRESH retry-fail] id=\(accountID, privacy: .public) err=\(String(describing: error), privacy: .public)")
                 }
             }
-            setError(accountID, "unauthorized")
+            setError(accountID, .unauthorized)
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(60)
         } catch UsageClientError.rateLimited(let retry) {
             let wait = retry.flatMap { max($0, 30) } ?? 60
             Log.usage.error("[REFRESH 429] id=\(accountID, privacy: .public) wait=\(wait)")
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(wait)
-            setError(accountID, "rate_limited")
+            setError(accountID, .rateLimited)
         } catch {
             Log.usage.error("[REFRESH err] id=\(accountID, privacy: .public) err=\(String(describing: error), privacy: .public)")
-            setError(accountID, String(describing: error))
+            setError(accountID, .other(String(describing: error)))
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(120)
         }
     }
@@ -295,7 +295,7 @@ final class UsageMonitor: ObservableObject {
             return new
         } catch OAuthRefreshError.invalidGrant(let msg) {
             Log.usage.error("[REFRESH-TOKEN invalid_grant] id=\(accountID, privacy: .public) msg=\(msg, privacy: .public)")
-            setError(accountID, "invalid_grant")
+            setError(accountID, .invalidGrant)
             nextEligibleAt[accountID] = clock.now().addingTimeInterval(300)  // 5분 backoff — 재로그인 필요
             return nil
         } catch OAuthRefreshError.rateLimited(let retry) {
@@ -325,8 +325,8 @@ final class UsageMonitor: ObservableObject {
         liveCredsReadRaw()
     }
 
-    private func setError(_ id: AccountID, _ msg: String) {
-        if lastError[id] != msg { lastError[id] = msg }
+    private func setError(_ id: AccountID, _ err: AccountError) {
+        if lastError[id] != err { lastError[id] = err }
     }
 
     /// fetchedAt 외 표시용 필드가 같으면 동일로 간주.
